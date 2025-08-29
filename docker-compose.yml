@@ -1,0 +1,46 @@
+# Real Estate Platform Docker Configuration
+version: '3.8'
+
+services:
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: real_estate_db
+    environment:
+      MYSQL_DATABASE: real_estate_db
+      MYSQL_USER: real_estate_user
+      MYSQL_PASSWORD: real_estate_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d
+    networks:
+      - real_estate_network
+
+  # FastAPI Application
+  api:
+    build: .
+    container_name: real_estate_api
+    environment:
+      DATABASE_URL: mysql+pymysql://real_estate_user:real_estate_password@db:3306/real_estate_db
+      SECRET_KEY: your-production-secret-key-change-this
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - real_estate_network
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  mysql_data:
+
+networks:
+  real_estate_network:
+    driver: bridge
