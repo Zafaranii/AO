@@ -9,7 +9,8 @@ from schemas.rental_contract import (
 )
 from crud import (
     get_rental_contract, get_rental_contract_by_part, get_rental_contracts,
-    create_rental_contract, update_rental_contract, delete_rental_contract
+    get_rental_contracts_by_studio_ordered, create_rental_contract, 
+    update_rental_contract, delete_rental_contract
 )
 from dependencies import get_current_admin_or_super_admin, get_current_super_admin
 
@@ -37,6 +38,25 @@ async def list_rental_contracts(
     )
     return contracts
 
+@router.get("/by-studio", response_model=List[RentalContractResponse])
+async def list_rental_contracts_by_studio(
+    skip: int = 0,
+    limit: int = 100,
+    apartment_id: Optional[int] = Query(None, description="Filter by apartment ID"),
+    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin_or_super_admin)
+):
+    """Get rental contracts ordered by studio number (latest first) (admin only)."""
+    contracts = get_rental_contracts_by_studio_ordered(
+        db=db,
+        apartment_id=apartment_id,
+        is_active=is_active,
+        skip=skip,
+        limit=limit
+    )
+    return contracts
+
 @router.get("/{contract_id}", response_model=RentalContractResponse)
 async def get_rental_contract_by_id(
     contract_id: int,
@@ -55,8 +75,21 @@ async def create_new_rental_contract(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin_or_super_admin)
 ):
-    """Create new rental contract (admin only)."""
-    return create_rental_contract(db=db, contract=contract, created_by_admin_id=current_admin.id)
+    """Create new rental contract (admin only). Master admin can create contracts for any apartment, regular admins can only create contracts for apartments they created."""
+    try:
+        return create_rental_contract(
+            db=db, 
+            contract=contract, 
+            created_by_admin_id=current_admin.id,
+            current_admin_role=current_admin.role.value
+        )
+    except ValueError as e:
+        if "Only the admin who created the apartment" in str(e):
+            raise HTTPException(status_code=403, detail=str(e))
+        elif "not found" in str(e):
+            raise HTTPException(status_code=404, detail=str(e))
+        else:
+            raise HTTPException(status_code=400, detail=str(e))
 
 @router.put("/{contract_id}", response_model=RentalContractResponse)
 async def update_rental_contract_details(

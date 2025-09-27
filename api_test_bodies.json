@@ -1,0 +1,448 @@
+{
+  "authentication": {
+    "login": {
+      "description": "Login with email or phone and password",
+      "method": "POST",
+      "endpoint": "/auth/login",
+      "content_type": "application/x-www-form-urlencoded",
+      "body": {
+        "username": "admin@example.com",
+        "password": "admin123"
+      },
+      "alternative_username": "+201234567890"
+    },
+    "register": {
+      "description": "Register new admin (super admin only)",
+      "method": "POST",
+      "endpoint": "/auth/register",
+      "content_type": "application/json",
+      "body": {
+        "full_name": "John Doe",
+        "email": "john.doe@example.com",
+        "phone": "+201234567890",
+        "password": "securepassword123",
+        "role": "studio_rental"
+      }
+    },
+    "create_master_admin": {
+      "description": "Create master admin with special password (initial setup only)",
+      "method": "POST",
+      "endpoint": "/api/v1/auth/create-master-admin",
+      "content_type": "application/json",
+      "body": {
+        "full_name": "Master Administrator",
+        "email": "master@example.com",
+        "phone": "+201111111111",
+        "password": "masterpassword123",
+        "master_password": "MASTER_ADMIN_SETUP_2024"
+      }
+    }
+  },
+  "admin_management": {
+    "list_admins": {
+      "description": "Get list of all admins (super admin only)",
+      "method": "GET",
+      "endpoint": "/admins/",
+      "query_params": {
+        "skip": 0,
+        "limit": 100
+      }
+    },
+    "get_current_admin": {
+      "description": "Get current admin's information",
+      "method": "GET",
+      "endpoint": "/admins/me"
+    },
+    "get_admin_by_id": {
+      "description": "Get admin by ID (super admin only)",
+      "method": "GET",
+      "endpoint": "/admins/1"
+    },
+    "create_admin": {
+      "description": "Create new admin (super admin only)",
+      "method": "POST",
+      "endpoint": "/admins/",
+      "content_type": "application/json",
+      "body": {
+        "full_name": "Jane Smith",
+        "email": "jane.smith@example.com",
+        "phone": "+201987654321",
+        "password": "newpassword123",
+        "role": "apartment_sale"
+      }
+    },
+    "update_admin": {
+      "description": "Update admin (super admin only)",
+      "method": "PUT",
+      "endpoint": "/admins/1",
+      "content_type": "application/json",
+      "body": {
+        "full_name": "Jane Smith Updated",
+        "email": "jane.updated@example.com",
+        "phone": "+201987654321",
+        "role": "studio_rental"
+      }
+    },
+    "update_current_admin": {
+      "description": "Update current admin's own information",
+      "method": "PUT",
+      "endpoint": "/admins/me",
+      "content_type": "application/json",
+      "body": {
+        "full_name": "My Updated Name",
+        "phone": "+201111111111"
+      }
+    },
+    "delete_admin": {
+      "description": "Delete admin (super admin only)",
+      "method": "DELETE",
+      "endpoint": "/admins/2"
+    },
+    "update_email_secure": {
+      "description": "Update admin email with password verification (super admin only)",
+      "method": "PUT",
+      "endpoint": "/admins/1/email",
+      "content_type": "application/json",
+      "body": {
+        "new_email": "newemail@example.com",
+        "current_password": "currentpassword123"
+      }
+    },
+    "update_password_secure": {
+      "description": "Update admin password with password verification (super admin only)",
+      "method": "PUT",
+      "endpoint": "/admins/1/password",
+      "content_type": "application/json",
+      "body": {
+        "new_password": "newsecurepassword123",
+        "current_password": "currentpassword123"
+      }
+    }
+  },
+  "apartments_sale": {
+    "list_apartments_sale": {
+      "description": "Get list of apartments for sale",
+      "method": "GET",
+      "endpoint": "/apartments/sale",
+      "query_params": {
+        "skip": 0,
+        "limit": 100
+      }
+    },
+    "get_apartment_sale": {
+      "description": "Get apartment sale details",
+      "method": "GET",
+      "endpoint": "/apartments/sale/1"
+    },
+    "create_apartment_sale": {
+      "description": "Create new apartment for sale (admin only)",
+      "method": "POST",
+      "endpoint": "/apartments/sale",
+      "content_type": "application/json",
+      "body": {
+        "name": "Luxury Apartment in Maadi",
+        "location": "maadi",
+        "address": "123 Maadi Corniche, Cairo, Egypt",
+        "area": 120.50,
+        "number": "A-101",
+        "price": 2500000.00,
+        "bedrooms": 3,
+        "bathrooms": "private",
+        "description": "Beautiful luxury apartment with stunning Nile view",
+        "photos_url": [
+          "https://example.com/photos/living-room.jpg",
+          "https://example.com/photos/kitchen.jpg",
+          "https://example.com/photos/bedroom.jpg",
+          "https://example.com/photos/bathroom.jpg",
+          "https://example.com/photos/balcony.jpg"
+        ],
+        "location_on_map": "https://maps.google.com/example",
+        "facilities_amenities": "Swimming pool, Gym, Security, Parking, Garden"
+      }
+    },
+    "update_apartment_sale": {
+      "description": "Update apartment sale (admin only)",
+      "method": "PUT",
+      "endpoint": "/apartments/sale/1",
+      "content_type": "application/json",
+      "body": {
+        "name": "Updated Luxury Apartment in Maadi",
+        "price": 2600000.00,
+        "description": "Updated description with more details",
+        "photos_url": [
+          "https://example.com/photos/new-living-room.jpg",
+          "https://example.com/photos/new-kitchen.jpg"
+        ]
+      }
+    },
+    "delete_apartment_sale": {
+      "description": "Delete apartment sale (super admin only)",
+      "method": "DELETE",
+      "endpoint": "/apartments/sale/1"
+    }
+  },
+  "apartments_rent": {
+    "list_apartments_rent": {
+      "description": "Get list of apartments for rent",
+      "method": "GET",
+      "endpoint": "/apartments/rent",
+      "query_params": {
+        "skip": 0,
+        "limit": 100
+      }
+    },
+    "get_apartment_rent": {
+      "description": "Get apartment rent details with parts",
+      "method": "GET",
+      "endpoint": "/apartments/rent/1"
+    },
+    "create_apartment_rent": {
+      "description": "Create new apartment for rent (admin only)",
+      "method": "POST",
+      "endpoint": "/apartments/rent",
+      "content_type": "application/json",
+      "body": {
+        "name": "Modern Studio Apartment in Mokattam",
+        "location": "mokkattam",
+        "address": "456 Mokattam Hills, Cairo, Egypt",
+        "area": 45.75,
+        "number": "S-201",
+        "price": 3500.00,
+        "bedrooms": 1,
+        "bathrooms": "private",
+        "description": "Modern studio apartment perfect for young professionals",
+        "photos_url": [
+          "https://example.com/photos/studio-main.jpg",
+          "https://example.com/photos/studio-kitchen.jpg",
+          "https://example.com/photos/studio-bathroom.jpg"
+        ],
+        "location_on_map": "https://maps.google.com/example2",
+        "facilities_amenities": "24/7 Security, Elevator, Balcony, Air Conditioning",
+        "floor": 5,
+        "total_parts": 3
+      }
+    },
+    "update_apartment_rent": {
+      "description": "Update apartment rent (admin only)",
+      "method": "PUT",
+      "endpoint": "/apartments/rent/1",
+      "content_type": "application/json",
+      "body": {
+        "name": "Updated Modern Studio Apartment",
+        "price": 3800.00,
+        "description": "Updated description with new amenities",
+        "photos_url": [
+          "https://example.com/photos/updated-studio.jpg"
+        ]
+      }
+    },
+    "delete_apartment_rent": {
+      "description": "Delete apartment rent (super admin only)",
+      "method": "DELETE",
+      "endpoint": "/apartments/rent/1"
+    }
+  },
+  "apartment_parts": {
+    "list_apartment_parts": {
+      "description": "Get apartment parts for specific apartment",
+      "method": "GET",
+      "endpoint": "/apartments/rent/1/parts",
+      "query_params": {
+        "skip": 0,
+        "limit": 100
+      }
+    },
+    "list_all_apartment_parts": {
+      "description": "Get all apartment parts across all apartments",
+      "method": "GET",
+      "endpoint": "/apartments/parts",
+      "query_params": {
+        "skip": 0,
+        "limit": 100
+      }
+    },
+    "create_apartment_part": {
+      "description": "Create apartment part (admin only)",
+      "method": "POST",
+      "endpoint": "/apartments/rent/1/parts",
+      "content_type": "application/json",
+      "body": {
+        "status": "available",
+        "title": "Studio A - Ground Floor",
+        "area": 25.50,
+        "monthly_price": 2500.00,
+        "bedrooms": 1,
+        "bathrooms": "shared",
+        "furnished": "yes",
+        "balcony": "no",
+        "description": "Cozy ground floor studio with shared bathroom",
+        "photos_url": [
+          "https://example.com/photos/studio-a-main.jpg",
+          "https://example.com/photos/studio-a-kitchen.jpg"
+        ]
+      }
+    },
+    "update_apartment_part": {
+      "description": "Update apartment part (admin only)",
+      "method": "PUT",
+      "endpoint": "/apartments/rent/1/parts/1",
+      "content_type": "application/json",
+      "body": {
+        "status": "rented",
+        "title": "Updated Studio A - Ground Floor",
+        "monthly_price": 2700.00,
+        "description": "Updated description with new details",
+        "photos_url": [
+          "https://example.com/photos/updated-studio-a.jpg"
+        ]
+      }
+    },
+    "delete_apartment_part": {
+      "description": "Delete apartment part (super admin only)",
+      "method": "DELETE",
+      "endpoint": "/apartments/rent/1/parts/1"
+    }
+  },
+  "whatsapp_contact": {
+    "get_whatsapp_contact": {
+      "description": "Get WhatsApp contact link for apartment inquiry",
+      "method": "GET",
+      "endpoint": "/apartments/rent/1/whatsapp"
+    }
+  },
+  "rental_contracts": {
+    "list_rental_contracts": {
+      "description": "Get rental contracts (admin only)",
+      "method": "GET",
+      "endpoint": "/rental-contracts/",
+      "query_params": {
+        "skip": 0,
+        "limit": 100,
+        "apartment_id": 1,
+        "is_active": true
+      }
+    },
+    "get_rental_contract": {
+      "description": "Get rental contract by ID (admin only)",
+      "method": "GET",
+      "endpoint": "/rental-contracts/1"
+    },
+    "create_rental_contract": {
+      "description": "Create new rental contract (admin only)",
+      "method": "POST",
+      "endpoint": "/rental-contracts/",
+      "content_type": "application/json",
+      "body": {
+        "apartment_part_id": 1,
+        "customer_name": "Ahmed Mohamed",
+        "customer_phone": "+201234567890",
+        "customer_id_number": "12345678901234",
+        "how_did_customer_find_us": "facebook",
+        "paid_deposit": 5000.00,
+        "warrant_amount": 2500.00,
+        "rent_start_date": "2024-01-01",
+        "rent_end_date": "2024-12-31",
+        "rent_period": 12,
+        "contract_url": "https://example.com/contracts/contract-001.pdf",
+        "studio_number": "S-201-A",
+        "customer_id_url": "https://example.com/documents/id-001.jpg",
+        "commission": 500.00,
+        "rent_price": 2500.00
+      }
+    },
+    "update_rental_contract": {
+      "description": "Update rental contract (admin only)",
+      "method": "PUT",
+      "endpoint": "/rental-contracts/1",
+      "content_type": "application/json",
+      "body": {
+        "customer_name": "Ahmed Mohamed Updated",
+        "customer_phone": "+201234567891",
+        "rent_price": 2700.00,
+        "is_active": false
+      }
+    },
+    "delete_rental_contract": {
+      "description": "Delete rental contract (super admin only)",
+      "method": "DELETE",
+      "endpoint": "/rental-contracts/1"
+    }
+  },
+  "test_scenarios": {
+    "complete_apartment_workflow": {
+      "description": "Complete workflow for creating and managing apartments",
+      "steps": [
+        {
+          "step": 1,
+          "action": "Login as super admin",
+          "endpoint": "/auth/login",
+          "body": {
+            "username": "superadmin@example.com",
+            "password": "superadmin123"
+          }
+        },
+        {
+          "step": 2,
+          "action": "Create apartment for rent",
+          "endpoint": "/apartments/rent",
+          "body": {
+            "name": "Test Apartment Building",
+            "location": "maadi",
+            "address": "Test Address 123",
+            "area": 100.00,
+            "number": "T-001",
+            "price": 5000.00,
+            "bedrooms": 2,
+            "bathrooms": "private",
+            "description": "Test apartment for workflow",
+            "photos_url": ["https://example.com/test1.jpg", "https://example.com/test2.jpg"],
+            "facilities_amenities": "Test amenities",
+            "floor": 3,
+            "total_parts": 2
+          }
+        },
+        {
+          "step": 3,
+          "action": "Create apartment parts",
+          "endpoint": "/apartments/rent/1/parts",
+          "body": {
+            "title": "Part A",
+            "area": 50.00,
+            "monthly_price": 2500.00,
+            "bedrooms": 1,
+            "bathrooms": "shared",
+            "furnished": "yes",
+            "balcony": "yes",
+            "description": "Test part A",
+            "photos_url": ["https://example.com/part-a.jpg"]
+          }
+        },
+        {
+          "step": 4,
+          "action": "Create rental contract",
+          "endpoint": "/rental-contracts/",
+          "body": {
+            "apartment_part_id": 1,
+            "customer_name": "Test Customer",
+            "customer_phone": "+201111111111",
+            "customer_id_number": "11111111111111",
+            "how_did_customer_find_us": "google",
+            "paid_deposit": 2500.00,
+            "warrant_amount": 2500.00,
+            "rent_start_date": "2024-01-01",
+            "rent_end_date": "2024-06-30",
+            "rent_period": 6,
+            "studio_number": "T-001-A",
+            "commission": 250.00,
+            "rent_price": 2500.00
+          }
+        }
+      ]
+    }
+  },
+  "curl_examples": {
+    "login": "curl -X POST 'http://localhost:8000/auth/login' -H 'Content-Type: application/x-www-form-urlencoded' -d 'username=admin@example.com&password=admin123'",
+    "create_apartment_sale": "curl -X POST 'http://localhost:8000/apartments/sale' -H 'Content-Type: application/json' -H 'Authorization: Bearer YOUR_TOKEN' -d '{\"name\":\"Test Apartment\",\"location\":\"maadi\",\"address\":\"Test Address\",\"area\":100.0,\"number\":\"A-001\",\"price\":1000000.0,\"bedrooms\":2,\"bathrooms\":\"private\",\"photos_url\":[\"https://example.com/photo1.jpg\"]}'",
+    "create_apartment_rent": "curl -X POST 'http://localhost:8000/apartments/rent' -H 'Content-Type: application/json' -H 'Authorization: Bearer YOUR_TOKEN' -d '{\"name\":\"Test Rent Apartment\",\"location\":\"mokkattam\",\"address\":\"Test Rent Address\",\"area\":50.0,\"number\":\"R-001\",\"price\":3000.0,\"bedrooms\":1,\"bathrooms\":\"private\",\"floor\":1,\"total_parts\":1,\"photos_url\":[\"https://example.com/rent1.jpg\"]}'"
+  }
+}

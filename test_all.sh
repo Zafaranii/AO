@@ -65,9 +65,6 @@ fi
 echo "Listing rental contracts..."
 curl -s -H "$(bearer "$TOKEN")" "$BASE_URL/api/v1/rental-contracts?skip=0&limit=50" | cat
 
-# List Notifications
-echo "Listing notifications..."
-curl -s -H "$(bearer "$TOKEN")" "$BASE_URL/api/v1/notifications?skip=0&limit=50" | cat
 
 # Create Sale Apartment
 echo "Creating sale apartment..."

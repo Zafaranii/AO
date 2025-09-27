@@ -9,7 +9,6 @@ from .enums import (
     ApartmentTypeEnum,
     PartStatusEnum,
     AdminRoleEnum,
-    NotificationStatusEnum,
 )
 
 from .admin import (
@@ -49,12 +48,6 @@ from .rental_contract import (
     RentalContractResponse,
 )
 
-from .notification import (
-    NotificationBase,
-    NotificationCreate,
-    NotificationUpdate,
-    NotificationResponse,
-)
 
 from .auth import (
     Token,

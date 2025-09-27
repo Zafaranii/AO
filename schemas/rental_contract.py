@@ -3,15 +3,24 @@ from typing import Optional
 from datetime import datetime, date
 from decimal import Decimal
 
+from .enums import CustomerSourceEnum
+
 
 class RentalContractBase(BaseModel):
-    tenant_name: str
-    tenant_phone: str
-    contract_start_date: date
-    contract_end_date: date
-    rent_value: Decimal
-    id_card_scan_url: Optional[str] = None
-    contract_scan_url: Optional[str] = None
+    customer_name: str
+    customer_phone: str
+    customer_id_number: str
+    how_did_customer_find_us: CustomerSourceEnum
+    paid_deposit: Decimal
+    warrant_amount: Decimal
+    rent_start_date: date
+    rent_end_date: date
+    rent_period: int  # Period in months
+    contract_url: Optional[str] = None
+    studio_number: str
+    customer_id_url: Optional[str] = None
+    commission: Decimal
+    rent_price: Decimal
 
 
 class RentalContractCreate(RentalContractBase):
@@ -19,13 +28,20 @@ class RentalContractCreate(RentalContractBase):
 
 
 class RentalContractUpdate(BaseModel):
-    tenant_name: Optional[str] = None
-    tenant_phone: Optional[str] = None
-    contract_start_date: Optional[date] = None
-    contract_end_date: Optional[date] = None
-    rent_value: Optional[Decimal] = None
-    id_card_scan_url: Optional[str] = None
-    contract_scan_url: Optional[str] = None
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
+    customer_id_number: Optional[str] = None
+    how_did_customer_find_us: Optional[CustomerSourceEnum] = None
+    paid_deposit: Optional[Decimal] = None
+    warrant_amount: Optional[Decimal] = None
+    rent_start_date: Optional[date] = None
+    rent_end_date: Optional[date] = None
+    rent_period: Optional[int] = None
+    contract_url: Optional[str] = None
+    studio_number: Optional[str] = None
+    customer_id_url: Optional[str] = None
+    commission: Optional[Decimal] = None
+    rent_price: Optional[Decimal] = None
     is_active: Optional[bool] = None
 
 

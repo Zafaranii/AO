@@ -1,20 +1,31 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Enum
 from sqlalchemy.types import Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from database import Base
+from .enums import LocationEnum, BathroomTypeEnum
 
 
 class ApartmentRent(Base):
     __tablename__ = "apartment_rents"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(200), nullable=False)
-    location = Column(String(255), nullable=False)
-    total_parts = Column(Integer, nullable=False)
+    name = Column(String(200), nullable=False)
+    location = Column(Enum(LocationEnum), nullable=False)
+    address = Column(String(500), nullable=False)
+    area = Column(Numeric(8, 2), nullable=False)  # Area in square meters
+    number = Column(String(50), nullable=False)  # Apartment number
+    price = Column(Numeric(12, 2), nullable=False)
+    bedrooms = Column(Integer, nullable=False)
+    bathrooms = Column(Enum(BathroomTypeEnum), nullable=False)
     description = Column(Text, nullable=True)
-    rent_price = Column(Numeric(10, 2), nullable=False)
+    contact_number = Column(String(20), nullable=False)  # Auto-filled from admin
+    photos_url = Column(Text, nullable=True)  # JSON string of photo URLs
+    location_on_map = Column(String(500), nullable=True)  # Google Maps or similar link
+    facilities_amenities = Column(Text, nullable=True)  # Facilities and amenities
+    floor = Column(Integer, nullable=False)
+    total_parts = Column(Integer, nullable=False)
     listed_by_admin_id = Column(Integer, ForeignKey("admins.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

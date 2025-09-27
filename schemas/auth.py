@@ -8,7 +8,7 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    email: Optional[str] = None
+    admin_id: Optional[int] = None
 
 
 class WhatsAppLinkResponse(BaseModel):
