@@ -70,6 +70,28 @@ def create_super_admin():
     finally:
         db.close()
 
+def _clear_sample_domain_data():
+    """Delete all domain sample data (contracts, parts, apartments) while preserving admins."""
+    db = SessionLocal()
+    try:
+        from models import ApartmentRent, ApartmentSale, ApartmentPart, RentalContract
+        # 1) Delete contracts -> 2) parts -> 3) apartments (rent, sale)
+        db.query(RentalContract).delete(synchronize_session=False)
+        db.commit()
+        db.query(ApartmentPart).delete(synchronize_session=False)
+        db.commit()
+        db.query(ApartmentRent).delete(synchronize_session=False)
+        db.commit()
+        db.query(ApartmentSale).delete(synchronize_session=False)
+        db.commit()
+        print("Cleared existing sample domain data (contracts, parts, apartments). Admins preserved.")
+    except Exception as e:
+        print(f"Error clearing sample data: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 def setup_sample_data(super_admin: Admin):
     """Create some sample data for testing."""
     db = SessionLocal()
@@ -79,11 +101,8 @@ def setup_sample_data(super_admin: Admin):
         import json
         from datetime import date, timedelta
 
-        # Check if sample data already exists
-        existing_apartment = db.query(ApartmentRent).first()
-        if existing_apartment:
-            print("Sample data already exists")
-            return
+        # Always reset domain data before seeding, keep admins intact
+        _clear_sample_domain_data()
 
         admin_id = super_admin.id
         admin_phone = super_admin.phone or "+201234567890"
@@ -247,6 +266,7 @@ def setup_sample_data(super_admin: Admin):
     finally:
         db.close()
 
+
 def setup_sample_parts_for_existing(super_admin: Admin, force: bool = False):
     """Create sample apartment parts (and a rental contract) for an existing rent apartment.
     If force=True, parts are created even if parts already exist for the chosen apartment.
@@ -303,9 +323,8 @@ def setup_sample_parts_for_existing(super_admin: Admin, force: bool = False):
             ),
         ]
 
-        # If forcing, delete existing parts for that apartment first
+        # If forcing, delete existing parts and any related contracts first
         if existing_parts > 0 and force:
-            # Delete rental contracts referencing existing parts, then delete parts
             existing_part_ids = [pid for (pid,) in db.query(ApartmentPart.id).filter(
                 ApartmentPart.apartment_id == rent_apartment.id
             ).all()]
