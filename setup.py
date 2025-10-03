@@ -44,7 +44,7 @@ def create_super_admin():
         # Create super admin
         hashed_password = get_password_hash(admin_password)
         super_admin = Admin(
-            name=admin_name,
+            full_name=admin_name,
             email=admin_email,
             phone=admin_phone,
             role=AdminRoleEnum.super_admin,
