@@ -6,6 +6,7 @@ This script creates the initial super admin user and sets up the database.
 
 import asyncio
 import sys
+import os
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine, Base
 from models import Admin, AdminRoleEnum
@@ -246,6 +247,103 @@ def setup_sample_data(super_admin: Admin):
     finally:
         db.close()
 
+def setup_sample_parts_for_existing(super_admin: Admin):
+    """Create sample apartment parts (and a rental contract) for an existing rent apartment.
+    This runs even if rent apartments already exist, but skips if parts already exist for the chosen apartment.
+    """
+    db = SessionLocal()
+    try:
+        from models import ApartmentRent, ApartmentPart, RentalContract
+        from models.enums import BathroomTypeEnum, FurnishedEnum, BalconyEnum, PartStatusEnum, CustomerSourceEnum
+        import json
+        from datetime import date, timedelta
+
+        # Pick the first rent apartment
+        rent_apartment = db.query(ApartmentRent).order_by(ApartmentRent.id.asc()).first()
+        if not rent_apartment:
+            print("No rent apartments found. Please create rent apartments first.")
+            return
+
+        existing_parts = db.query(ApartmentPart).filter(ApartmentPart.apartment_id == rent_apartment.id).count()
+        if existing_parts > 0:
+            print(f"Apartment parts already exist for rent apartment id={rent_apartment.id}; skipping part seeding.")
+            return
+
+        admin_id = super_admin.id
+
+        parts = [
+            ApartmentPart(
+                apartment_id=rent_apartment.id,
+                status=PartStatusEnum.available,
+                title="Studio A",
+                area=30.0,
+                floor=rent_apartment.floor,
+                monthly_price=3500.00,
+                bedrooms=1,
+                bathrooms=BathroomTypeEnum.private,
+                furnished=FurnishedEnum.yes,
+                balcony=BalconyEnum.yes,
+                description="Cozy studio with balcony and AC",
+                photos_url=json.dumps(["https://example.com/photos/studio-a1.jpg"]),
+                created_by_admin_id=admin_id,
+            ),
+            ApartmentPart(
+                apartment_id=rent_apartment.id,
+                status=PartStatusEnum.rented,
+                title="Studio B",
+                area=28.0,
+                floor=rent_apartment.floor,
+                monthly_price=3400.00,
+                bedrooms=1,
+                bathrooms=BathroomTypeEnum.private,
+                furnished=FurnishedEnum.no,
+                balcony=BalconyEnum.no,
+                description="Bright studio, great value",
+                photos_url=json.dumps(["https://example.com/photos/studio-b1.jpg"]),
+                created_by_admin_id=admin_id,
+            ),
+        ]
+
+        for part in parts:
+            db.add(part)
+        db.commit()
+        for part in parts:
+            db.refresh(part)
+
+        # Add a rental contract for the rented part
+        rented_part = parts[1]
+        start_date = date.today().replace(day=1)
+        end_date = start_date + timedelta(days=365)
+
+        contract = RentalContract(
+            apartment_part_id=rented_part.id,
+            customer_name="John Doe",
+            customer_phone="+201234567890",
+            customer_id_number="12345678901234",
+            how_did_customer_find_us=CustomerSourceEnum.facebook,
+            paid_deposit=3400.00,
+            warrant_amount=3400.00,
+            rent_start_date=start_date,
+            rent_end_date=end_date,
+            rent_period=12,
+            contract_url="https://example.com/contracts/sample1.pdf",
+            customer_id_url="https://example.com/documents/id1.jpg",
+            commission=340.00,
+            rent_price=3400.00,
+            is_active=True,
+            created_by_admin_id=admin_id,
+        )
+        db.add(contract)
+        db.commit()
+
+        print(f"Created 2 apartment parts and 1 rental contract for rent apartment id={rent_apartment.id}.")
+
+    except Exception as e:
+        print(f"Error creating sample parts/contracts: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
 def main():
     """Main setup function."""
     print("=" * 50)
@@ -263,9 +361,31 @@ def main():
             sys.exit(1)
         
         # Step 3: Create sample data (optional)
-        create_sample = input("Do you want to create sample data? (y/n): ").lower().strip()
-        if create_sample in ['y', 'yes']:
+        auto_create = (
+            "--create-sample" in sys.argv or
+            "-y" in sys.argv or
+            os.getenv("CREATE_SAMPLE_DATA", "").lower() in ["1", "true", "yes", "y"]
+        )
+        create_parts_only = (
+            "--create-parts" in sys.argv or
+            os.getenv("CREATE_SAMPLE_PARTS", "").lower() in ["1", "true", "yes", "y"]
+        )
+        if auto_create:
             setup_sample_data(super_admin)
+        elif create_parts_only:
+            setup_sample_parts_for_existing(super_admin)
+        else:
+            try:
+                create_sample = input("Do you want to create sample data? (y/n): ").lower().strip()
+                if create_sample in ['y', 'yes']:
+                    setup_sample_data(super_admin)
+                else:
+                    create_parts = input("Only create parts and a contract for existing rent apartment? (y/n): ").lower().strip()
+                    if create_parts in ['y', 'yes']:
+                        setup_sample_parts_for_existing(super_admin)
+            except EOFError:
+                # Non-interactive environment, skip unless explicitly requested via flag/env
+                print("Non-interactive session detected; skipping sample data. Use --create-sample or --create-parts, or set CREATE_SAMPLE_DATA/CREATE_SAMPLE_PARTS.")
         
         print("\n" + "=" * 50)
         print("Setup completed successfully!")
