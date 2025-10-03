@@ -247,9 +247,9 @@ def setup_sample_data(super_admin: Admin):
     finally:
         db.close()
 
-def setup_sample_parts_for_existing(super_admin: Admin):
+def setup_sample_parts_for_existing(super_admin: Admin, force: bool = False):
     """Create sample apartment parts (and a rental contract) for an existing rent apartment.
-    This runs even if rent apartments already exist, but skips if parts already exist for the chosen apartment.
+    If force=True, parts are created even if parts already exist for the chosen apartment.
     """
     db = SessionLocal()
     try:
@@ -258,15 +258,14 @@ def setup_sample_parts_for_existing(super_admin: Admin):
         import json
         from datetime import date, timedelta
 
-        # Pick the first rent apartment
         rent_apartment = db.query(ApartmentRent).order_by(ApartmentRent.id.asc()).first()
         if not rent_apartment:
             print("No rent apartments found. Please create rent apartments first.")
             return
 
         existing_parts = db.query(ApartmentPart).filter(ApartmentPart.apartment_id == rent_apartment.id).count()
-        if existing_parts > 0:
-            print(f"Apartment parts already exist for rent apartment id={rent_apartment.id}; skipping part seeding.")
+        if existing_parts > 0 and not force:
+            print(f"Apartment parts already exist for rent apartment id={rent_apartment.id}; skipping part seeding. Use --force to override.")
             return
 
         admin_id = super_admin.id
@@ -304,16 +303,36 @@ def setup_sample_parts_for_existing(super_admin: Admin):
             ),
         ]
 
+        # If forcing, delete existing parts for that apartment first
+        if existing_parts > 0 and force:
+            # Delete rental contracts referencing existing parts, then delete parts
+            existing_part_ids = [pid for (pid,) in db.query(ApartmentPart.id).filter(
+                ApartmentPart.apartment_id == rent_apartment.id
+            ).all()]
+            if existing_part_ids:
+                db.query(RentalContract).filter(
+                    RentalContract.apartment_part_id.in_(existing_part_ids)
+                ).delete(synchronize_session=False)
+                db.commit()
+                db.query(ApartmentPart).filter(
+                    ApartmentPart.id.in_(existing_part_ids)
+                ).delete(synchronize_session=False)
+                db.commit()
+
         for part in parts:
             db.add(part)
         db.commit()
         for part in parts:
             db.refresh(part)
 
-        # Add a rental contract for the rented part
         rented_part = parts[1]
         start_date = date.today().replace(day=1)
         end_date = start_date + timedelta(days=365)
+
+        # Remove existing contracts for that part when forcing
+        if force:
+            db.query(RentalContract).filter(RentalContract.apartment_part_id == rented_part.id).delete()
+            db.commit()
 
         contract = RentalContract(
             apartment_part_id=rented_part.id,
@@ -370,10 +389,11 @@ def main():
             "--create-parts" in sys.argv or
             os.getenv("CREATE_SAMPLE_PARTS", "").lower() in ["1", "true", "yes", "y"]
         )
+        force = ("--force" in sys.argv or os.getenv("FORCE_SAMPLE", "").lower() in ["1", "true", "yes", "y"]) 
         if auto_create:
             setup_sample_data(super_admin)
         elif create_parts_only:
-            setup_sample_parts_for_existing(super_admin)
+            setup_sample_parts_for_existing(super_admin, force=force)
         else:
             try:
                 create_sample = input("Do you want to create sample data? (y/n): ").lower().strip()
@@ -382,10 +402,9 @@ def main():
                 else:
                     create_parts = input("Only create parts and a contract for existing rent apartment? (y/n): ").lower().strip()
                     if create_parts in ['y', 'yes']:
-                        setup_sample_parts_for_existing(super_admin)
+                        setup_sample_parts_for_existing(super_admin, force=False)
             except EOFError:
-                # Non-interactive environment, skip unless explicitly requested via flag/env
-                print("Non-interactive session detected; skipping sample data. Use --create-sample or --create-parts, or set CREATE_SAMPLE_DATA/CREATE_SAMPLE_PARTS.")
+                print("Non-interactive session detected; skipping sample data. Use --create-sample or --create-parts, optionally with --force.")
         
         print("\n" + "=" * 50)
         print("Setup completed successfully!")
