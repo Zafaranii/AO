@@ -69,57 +69,100 @@ def create_super_admin():
     finally:
         db.close()
 
-def setup_sample_data():
+def setup_sample_data(super_admin: Admin):
     """Create some sample data for testing."""
     db = SessionLocal()
     try:
         from models import ApartmentRent, ApartmentSale
-        
+        from models.enums import LocationEnum, BathroomTypeEnum
+        import json
+
         # Check if sample data already exists
         existing_apartment = db.query(ApartmentRent).first()
         if existing_apartment:
             print("Sample data already exists")
             return
-        
-        # Create sample rent apartments
+
+        admin_id = super_admin.id
+        admin_phone = super_admin.phone or "+201234567890"
+
+        # Create sample rent apartments (match current model fields)
         sample_rent_apartments = [
             ApartmentRent(
-                title="Luxury Apartment Downtown",
-                location="Downtown, City Center",
-                total_parts=4,
-                description="Modern luxury apartment with 4 studios available for rent",
-                rent_price=1200.00,
-                listed_by_admin_id=1  # Assuming super admin ID is 1
+                name="Luxury Studio in Maadi",
+                location=LocationEnum.maadi,
+                address="123 Maadi Corniche, Cairo, Egypt",
+                area=50.0,
+                number="S-301",
+                price=4000.00,
+                bedrooms=1,
+                bathrooms=BathroomTypeEnum.private,
+                description="Luxury studio with modern amenities",
+                photos_url=json.dumps([
+                    "https://example.com/photos/luxury-studio-1.jpg",
+                    "https://example.com/photos/luxury-studio-2.jpg"
+                ]),
+                location_on_map="https://maps.google.com/example3",
+                facilities_amenities="24/7 Security, Elevator, Balcony, Air Conditioning, Gym",
+                floor=8,
+                total_parts=2,
+                listed_by_admin_id=admin_id,
+                contact_number=admin_phone,
             ),
             ApartmentRent(
-                title="Student Housing Complex",
-                location="University District",
+                name="Student Housing Complex",
+                location=LocationEnum.mokkattam,
+                address="45 University District, Cairo, Egypt",
+                area=35.0,
+                number="S-102",
+                price=3800.00,
+                bedrooms=1,
+                bathrooms=BathroomTypeEnum.private,
+                description="Affordable housing for students",
+                photos_url=json.dumps([
+                    "https://example.com/photos/student-1.jpg"
+                ]),
+                location_on_map="https://maps.google.com/example4",
+                facilities_amenities="Elevator, Security",
+                floor=5,
                 total_parts=10,
-                description="Affordable housing for students with 10 individual studios",
-                rent_price=800.00,
-                listed_by_admin_id=1  # Assuming super admin ID is 1
-            )
+                listed_by_admin_id=admin_id,
+                contact_number=admin_phone,
+            ),
         ]
-        
-        # Create sample sale apartments
+
+        # Create sample sale apartments (match current model fields)
         sample_sale_apartments = [
             ApartmentSale(
-                title="Family House for Sale",
-                location="Suburban Area, Green Valley",
+                name="Family House for Sale",
+                location=LocationEnum.mokkattam,
+                address="789 Green Valley, Cairo, Egypt",
+                area=120.5,
+                number="V-101",
+                price=465000.00,
+                bedrooms=3,
+                bathrooms=BathroomTypeEnum.private,
                 description="Beautiful family house perfect for investment",
-                price=350000.00
+                photos_url=json.dumps([
+                    "https://example.com/photos/villa-exterior.jpg",
+                    "https://example.com/photos/villa-interior.jpg"
+                ]),
+                location_on_map="https://maps.google.com/example6",
+                facilities_amenities="Garden, Parking, Security, Air Conditioning",
+                listed_by_admin_id=admin_id,
+                contact_number=admin_phone,
             )
         ]
-        
+
         for apartment in sample_rent_apartments:
             db.add(apartment)
-        
+
         for apartment in sample_sale_apartments:
             db.add(apartment)
-        
+
         db.commit()
         print("Sample apartments created successfully!")
-        
+
     except Exception as e:
         print(f"Error creating sample data: {e}")
         db.rollback()
@@ -145,7 +188,7 @@ def main():
         # Step 3: Create sample data (optional)
         create_sample = input("Do you want to create sample data? (y/n): ").lower().strip()
         if create_sample in ['y', 'yes']:
-            setup_sample_data()
+            setup_sample_data(super_admin)
         
         print("\n" + "=" * 50)
         print("Setup completed successfully!")
