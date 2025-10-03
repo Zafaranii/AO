@@ -12,6 +12,6 @@ class TokenData(BaseModel):
 
 
 class WhatsAppLinkResponse(BaseModel):
-    whatsapp_url: str
+    # whatsapp_url: str
     admin_phone: str
-    message: str
+    # message: str

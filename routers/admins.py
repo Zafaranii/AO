@@ -4,8 +4,8 @@ from typing import List
 
 from database import get_db
 from models import Admin, AdminRoleEnum
-from schemas.admin import AdminCreate, AdminUpdate, AdminResponse, EmailUpdate, PasswordUpdate
-from crud import get_admins, get_admin, create_admin, update_admin, delete_admin, get_admin_by_email, verify_admin_password, update_admin_email, update_admin_password
+from schemas.admin import AdminCreate, AdminUpdate, AdminResponse
+from crud import get_admins, get_admin, create_admin, update_admin, delete_admin, get_admin_by_email
 from dependencies import get_current_super_admin, get_current_admin_or_super_admin
 
 router = APIRouter(
@@ -107,53 +107,3 @@ async def delete_admin_by_id(
     return db_admin
 
 
-@router.put("/{admin_id}/email", response_model=AdminResponse)
-async def update_admin_email_secure(
-    admin_id: int,
-    email_update: EmailUpdate,
-    db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_super_admin)
-):
-    """Update admin email with password verification (super admin only)."""
-    # Verify current password
-    if not verify_admin_password(db, current_admin.id, email_update.current_password):
-        raise HTTPException(
-            status_code=400,
-            detail="Current password is incorrect"
-        )
-    
-    # Update email
-    updated_admin = update_admin_email(db, admin_id, email_update.new_email)
-    if updated_admin is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Email already registered or admin not found"
-        )
-    
-    return updated_admin
-
-
-@router.put("/{admin_id}/password", response_model=AdminResponse)
-async def update_admin_password_secure(
-    admin_id: int,
-    password_update: PasswordUpdate,
-    db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_super_admin)
-):
-    """Update admin password with password verification (super admin only)."""
-    # Verify current password
-    if not verify_admin_password(db, current_admin.id, password_update.current_password):
-        raise HTTPException(
-            status_code=400,
-            detail="Current password is incorrect"
-        )
-    
-    # Update password
-    updated_admin = update_admin_password(db, admin_id, password_update.new_password)
-    if updated_admin is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Admin not found"
-        )
-    
-    return updated_admin

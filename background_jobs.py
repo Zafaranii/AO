@@ -16,16 +16,16 @@ async def system_health_check():
 def start_scheduler():
     """Start the background job scheduler."""
     # Schedule system health check daily at 9:00 AM
-    scheduler.add_job(
-        system_health_check,
-        CronTrigger(hour=9, minute=0),
-        id="system_health_check",
-        name="System health check",
-        replace_existing=True
-    )
+    # scheduler.add_job(
+    #     system_health_check,
+    #     CronTrigger(hour=9, minute=0),
+    #     id="system_health_check",
+    #     name="System health check",
+    #     replace_existing=True
+    # )
     
-    scheduler.start()
-    print("Background job scheduler started")
+    # scheduler.start()
+    # print("Background job scheduler started")
 
 def stop_scheduler():
     """Stop the background job scheduler."""

@@ -1,11 +1,6 @@
 from enum import Enum
 
 
-class ApartmentTypeEnum(str, Enum):
-    rent = "rent"
-    purchase = "purchase"
-
-
 class PartStatusEnum(str, Enum):
     available = "available"
     rented = "rented"

@@ -18,7 +18,7 @@ from schemas.auth import WhatsAppLinkResponse
 from crud import (
     get_apartments_sale, get_apartment_sale, create_apartment_sale, update_apartment_sale, delete_apartment_sale, get_apartments_sale_by_admin,
     get_apartments_rent, get_apartment_rent, create_apartment_rent, update_apartment_rent, delete_apartment_rent, get_apartments_rent_by_admin, get_apartments_with_parts_by_admin,
-    get_apartment_parts, create_apartment_part, update_apartment_part, delete_apartment_part,
+    get_apartment_parts, get_apartment_part, create_apartment_part, update_apartment_part, delete_apartment_part,
     get_admin_phone_for_whatsapp
 )
 from dependencies import get_current_admin_or_super_admin, get_current_super_admin
@@ -282,15 +282,12 @@ async def get_whatsapp_contact(
     clean_phone = ''.join(c for c in admin_phone if c.isdigit() or c == '+')
     
     # Create WhatsApp message
-    message = f"Hello! I'm interested in the apartment: {apartment.title} located at {apartment.location}. Could you please provide more information?"
-    encoded_message = urllib.parse.quote(message)
-    
-    whatsapp_url = f"https://wa.me/{clean_phone}?text={encoded_message}"
+    # message = f"Hello! I'm interested in the apartment: {apartment.name} located at {apartment.location}. Could you please provide more information?"
+    # encoded_message = urllib.parse.quote(message)
+    # whatsapp_url = f"https://wa.me/{clean_phone}?text={encoded_message}"
     
     return {
-        "whatsapp_url": whatsapp_url,
-        "admin_phone": admin_phone,
-        "message": message
+        "admin_phone": admin_phone
     }
 
 @router.get("/parts", response_model=List[ApartmentPartResponse])
@@ -301,6 +298,62 @@ async def list_all_apartment_parts(
 ):
     """List all apartment parts across all apartments."""
     return get_apartment_parts(db, apartment_id=None, skip=skip, limit=limit)
+
+@router.get("/parts/{part_id}", response_model=ApartmentPartResponse)
+async def get_apartment_part_details(part_id: int, db: Session = Depends(get_db)):
+    """Get specific apartment part by ID."""
+    part = get_apartment_part(db, part_id=part_id)
+    if part is None:
+        raise HTTPException(status_code=404, detail="Apartment part not found")
+    return part
+
+@router.put("/parts/{part_id}", response_model=ApartmentPartResponse)
+async def update_apartment_part_direct(
+    part_id: int,
+    part: ApartmentPartUpdate,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin_or_super_admin)
+):
+    """Update apartment part directly by ID (admin only)."""
+    try:
+        db_part = update_apartment_part(
+            db, 
+            part_id=part_id, 
+            part=part,
+            current_admin_id=current_admin.id,
+            current_admin_role=current_admin.role.value
+        )
+        if db_part is None:
+            raise HTTPException(status_code=404, detail="Apartment part not found")
+        return db_part
+    except ValueError as e:
+        if "Only the admin who created the apartment" in str(e):
+            raise HTTPException(status_code=403, detail=str(e))
+        else:
+            raise HTTPException(status_code=400, detail=str(e))
+
+@router.delete("/parts/{part_id}", response_model=ApartmentPartResponse)
+async def delete_apartment_part_direct(
+    part_id: int,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin_or_super_admin)
+):
+    """Delete apartment part directly by ID (admin only)."""
+    try:
+        db_part = delete_apartment_part(
+            db, 
+            part_id=part_id,
+            current_admin_id=current_admin.id,
+            current_admin_role=current_admin.role.value
+        )
+        if db_part is None:
+            raise HTTPException(status_code=404, detail="Apartment part not found")
+        return db_part
+    except ValueError as e:
+        if "Only the admin who created the apartment" in str(e):
+            raise HTTPException(status_code=403, detail=str(e))
+        else:
+            raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/my-content", response_model=AdminOwnContentResponse)

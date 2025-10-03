@@ -1,4 +1,4 @@
-from .enums import ApartmentTypeEnum, PartStatusEnum, AdminRoleEnum
+from .enums import PartStatusEnum, AdminRoleEnum
 
 from .admin import Admin
 from .apartment_sale import ApartmentSale

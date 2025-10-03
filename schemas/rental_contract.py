@@ -17,7 +17,6 @@ class RentalContractBase(BaseModel):
     rent_end_date: date
     rent_period: int  # Period in months
     contract_url: Optional[str] = None
-    studio_number: str
     customer_id_url: Optional[str] = None
     commission: Decimal
     rent_price: Decimal
@@ -38,7 +37,6 @@ class RentalContractUpdate(BaseModel):
     rent_end_date: Optional[date] = None
     rent_period: Optional[int] = None
     contract_url: Optional[str] = None
-    studio_number: Optional[str] = None
     customer_id_url: Optional[str] = None
     commission: Optional[Decimal] = None
     rent_price: Optional[Decimal] = None

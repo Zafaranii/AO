@@ -1,5 +1,4 @@
 from .enums import (
-    ApartmentTypeEnum,
     PartStatusEnum,
     AdminRoleEnum,
 )

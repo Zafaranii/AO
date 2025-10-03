@@ -86,7 +86,20 @@ DB_ECHO=false
 - Database: `mysql+pymysql://root:password@localhost:3306/real_estate_db`
 - The server will show a warning message about using default settings
 
-### 6. Initialize Super Admin (Optional)
+### 6. Run Database Cleanup (Optional)
+
+The API has been cleaned up to remove redundant fields. Run the migration to clean up the database:
+
+```bash
+python migrate_new_fields.py
+```
+
+This will:
+- Remove redundant and unnecessary fields from database tables
+- Preserve all existing data
+- Clean up the database structure
+
+### 7. Initialize Super Admin (Optional)
 
 The database and tables are created automatically, but you may want to create a super admin user:
 
@@ -98,7 +111,7 @@ This will:
 - Create a super admin user
 - Optionally create sample data
 
-### 7. Start the Backend Server
+### 8. Start the Backend Server
 
 ```bash
 python main.py

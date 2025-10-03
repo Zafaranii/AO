@@ -22,7 +22,6 @@ class RentalContract(Base):
     rent_end_date = Column(Date, nullable=False)
     rent_period = Column(Integer, nullable=False)  # Period in months
     contract_url = Column(String(500), nullable=True)
-    studio_number = Column(String(50), nullable=False)
     customer_id_url = Column(String(500), nullable=True)
     commission = Column(Numeric(10, 2), nullable=False)
     rent_price = Column(Numeric(10, 2), nullable=False)

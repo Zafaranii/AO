@@ -70,6 +70,7 @@ def update_apartment_part(db: Session, part_id: int, part: ApartmentPartUpdate, 
             raise ValueError("Only the admin who created the apartment can update its parts")
         
         update_data = part.dict(exclude_unset=True)
+        
         for field, value in update_data.items():
             if field == 'photos_url' and value is not None:
                 setattr(db_part, field, json.dumps(value))

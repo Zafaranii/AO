@@ -31,11 +31,105 @@ Authorization: Bearer <your_jwt_token>
 Content-Type: application/json
 ```
 
+## 🚨 **CRITICAL FIELD MAPPING**
+
+**Frontend vs API Field Names:**
+| Frontend Field | API Field | Notes |
+|---|---|---|
+| `title` | `name` | ⚠️ **Required** - Apartment/property name |
+| `images` | `photos_url` | Array of image URLs |
+| `amenities` | `facilities_amenities` | Text description of amenities |
+| `coordinates` | `location_on_map` | Google Maps link or coordinates |
+| `contact_number` | Auto-filled | ❌ **Don't send** - Filled by admin's phone |
+| `total_studios` | `total_parts` | Number of parts in apartment |
+
+**Enum Values (Case Sensitive):**
+- `location`: `"maadi"` | `"mokkattam"` (lowercase)
+- `bathrooms`: `"shared"` | `"private"` (string, not integer)
+- `furnished`: `"yes"` | `"no"`
+- `balcony`: `"yes"` | `"shared"` | `"no"`
+- `status` (parts): `"available"` | `"rented"` | `"upcoming_end"`
+- `role` (admin): `"super_admin"` | `"studio_rental"` | `"apartment_sale"`
+- `how_did_customer_find_us`: `"facebook"` | `"instagram"` | `"google"` | `"referral"` | `"walk_in"` | `"other"`
+
+**Required Fields for Apartment Creation:**
+- ✅ `name` (not `title`)
+- ✅ `location` (lowercase enum)
+- ✅ `address`
+- ✅ `area` (decimal as string)
+- ✅ `number` (apartment number)
+- ✅ `price` (decimal as string)
+- ✅ `bedrooms` (integer)
+- ✅ `bathrooms` (string enum)
+- ✅ `floor` (integer - for rent apartments)
+- ✅ `total_parts` (integer - for rent apartments)
+
+## ⚠️ **COMMON VALIDATION ERRORS**
+
+**Error Response Format:**
+```json
+{
+  "detail": [
+    {
+      "type": "missing",
+      "loc": ["body", "name"],
+      "msg": "Field required",
+      "input": { /* your request body */ }
+    }
+  ]
+}
+```
+
+**Frequent Issues:**
+1. **Missing `name` field** - Frontend sends `title`, API expects `name`
+2. **Wrong `location` case** - Use `"mokkattam"` not `"Mokkattam"`
+3. **Wrong `bathrooms` type** - Use `"private"` not `1`
+4. **Missing required fields** - `floor` and `total_parts` for rent apartments
+5. **Auto-filled fields** - Don't send `contact_number`, it's auto-filled
+
+**❌ WRONG Request (causes validation errors):**
+```json
+{
+  "title": "Marwan",                    // ❌ Should be "name"
+  "location": "Mokkattam",              // ❌ Should be "mokkattam" (lowercase)
+  "address": "aa",
+  "price": 0,
+  "area": 0,
+  "bedrooms": 0,
+  "bathrooms": 1,                       // ❌ Should be "private" or "shared"
+  "furnished": true,                    // ❌ Should be "yes" or "no"
+  "amenities": ["Gym"],                 // ❌ Should be "facilities_amenities"
+  "images": ["base64..."],              // ❌ Should be "photos_url"
+  "coordinates": {"lat": 0, "lng": 0},  // ❌ Should be "location_on_map"
+  "contact_number": "+20123456789"      // ❌ Don't send, auto-filled
+}
+```
+
+**✅ CORRECT Request:**
+```json
+{
+  "name": "Marwan",
+  "location": "mokkattam",
+  "address": "aa",
+  "number": "A-001",
+  "price": "0.00",
+  "area": "0.00",
+  "bedrooms": 0,
+  "bathrooms": "private",
+  "floor": 1,
+  "total_parts": 1,
+  "description": "aaa",
+  "photos_url": ["https://example.com/image.jpg"],
+  "location_on_map": "https://maps.google.com/...",
+  "facilities_amenities": "Gym"
+}
+```
+
 ## 📋 Complete API Reference
 
 ### Authentication Endpoints
 
-#### POST `/auth/login`
+#### POST `/api/v1/auth/login`
 **Purpose:** Authenticate admin and get access token
 
 **Request Body (Form Data):**
@@ -55,7 +149,34 @@ username=admin@example.com&password=password123
 - `401`: Invalid credentials
 - `422`: Validation error (missing fields)
 
-#### POST `/auth/create-master-admin`
+#### POST `/api/v1/auth/register`
+**Purpose:** Register new admin (super admin only)
+
+**Request:**
+```json
+{
+  "full_name": "New Admin",
+  "email": "newadmin@example.com",
+  "phone": "+201234567890",
+  "password": "password123",
+  "role": "apartment_sale"
+}
+```
+
+**Response:**
+```json
+{
+  "id": 2,
+  "full_name": "New Admin",
+  "email": "newadmin@example.com",
+  "phone": "+201234567890",
+  "role": "apartment_sale",
+  "created_at": "2025-09-05T20:15:30",
+  "updated_at": null
+}
+```
+
+#### POST `/api/v1/auth/create-master-admin`
 **Purpose:** Create initial master admin (one-time setup)
 
 **Request:**
@@ -84,7 +205,7 @@ username=admin@example.com&password=password123
 
 ### Admin Management Endpoints
 
-#### GET `/admins/`
+#### GET `/api/v1/admins/`
 **Purpose:** Get list of all admins (super admin only)
 
 **Query Parameters:**
@@ -110,7 +231,7 @@ username=admin@example.com&password=password123
 - `401`: Not authenticated
 - `403`: Not super admin
 
-#### GET `/admins/me`
+#### GET `/api/v1/admins/me`
 **Purpose:** Get current admin's information
 
 **Headers Required:**
@@ -118,7 +239,20 @@ username=admin@example.com&password=password123
 Authorization: Bearer <token>
 ```
 
-#### POST `/admins/`
+**Response:**
+```json
+{
+  "id": 1,
+  "full_name": "Master Administrator",
+  "email": "master@example.com",
+  "phone": "+201111111111",
+  "role": "super_admin",
+  "created_at": "2025-09-05T19:51:52",
+  "updated_at": null
+}
+```
+
+#### POST `/api/v1/admins/`
 **Purpose:** Create new admin (super admin only)
 
 **Request:**
@@ -137,7 +271,7 @@ Authorization: Bearer <token>
 - `studio_rental`: Can manage studio rentals
 - `apartment_sale`: Can manage apartment sales
 
-#### PUT `/admins/{admin_id}`
+#### PUT `/api/v1/admins/{admin_id}`
 **Purpose:** Update admin information (super admin only)
 
 **Request:**
@@ -163,19 +297,66 @@ Authorization: Bearer <token>
 }
 ```
 
-#### DELETE `/admins/{admin_id}`
+#### GET `/api/v1/admins/{admin_id}`
+**Purpose:** Get admin by ID (super admin only)
+
+**Response:**
+```json
+{
+  "id": 2,
+  "full_name": "Regular Admin",
+  "email": "admin@example.com",
+  "phone": "+201234567890",
+  "role": "studio_rental",
+  "created_at": "2025-09-05T20:15:30",
+  "updated_at": null
+}
+```
+
+#### PUT `/api/v1/admins/me`
+**Purpose:** Update current admin's own information
+
+**Request:**
+```json
+{
+  "full_name": "Updated Admin Name",
+  "email": "updated@example.com",
+  "phone": "+201234567890"
+}
+```
+
+**Response:**
+```json
+{
+  "id": 2,
+  "full_name": "Updated Admin Name",
+  "email": "updated@example.com",
+  "phone": "+201234567890",
+  "role": "studio_rental",
+  "created_at": "2025-09-05T20:15:30",
+  "updated_at": "2025-09-05T20:20:15"
+}
+```
+
+#### DELETE `/api/v1/admins/{admin_id}`
 **Purpose:** Delete admin (super admin only)
 
 **Response:**
 ```json
 {
-  "message": "Admin deleted successfully"
+  "id": 2,
+  "full_name": "Regular Admin",
+  "email": "admin@example.com",
+  "phone": "+201234567890",
+  "role": "studio_rental",
+  "created_at": "2025-09-05T20:15:30",
+  "updated_at": null
 }
 ```
 
 ### Apartment Management Endpoints
 
-<!-- #### GET `/apartments/rent`
+#### GET `/api/v1/apartments/rent`
 **Purpose:** Get list of all rent apartments
 
 **Query Parameters:**
@@ -204,18 +385,18 @@ Authorization: Bearer <token>
     "facilities_amenities": "24/7 Security, Elevator, Balcony, Air Conditioning",
     "floor": 5,
     "total_parts": 3,
-    "contact_number": "string",
+    "contact_number": "+201234567890",
     "listed_by_admin_id": 4,
     "created_at": "2025-09-05T20:10:47",
     "updated_at": null
   }
 ]
-``` -->
+```
 
-#### GET `/apartments/rent/{apartment_id}`
+#### GET `/api/v1/apartments/rent/{apartment_id}`
 **Purpose:** Get specific rent apartment by ID
 
-#### POST `/apartments/rent`
+#### POST `/api/v1/apartments/rent`
 **Purpose:** Create new rent apartment (admin only)
 
 **Request:**
@@ -237,8 +418,7 @@ Authorization: Bearer <token>
   "location_on_map": "https://maps.google.com/example3",
   "facilities_amenities": "24/7 Security, Elevator, Balcony, Air Conditioning, Gym",
   "floor": 8,
-  "total_parts": 2,
-  "contact_number": "+201234567890"
+  "total_parts": 2
 }
 ```
 
@@ -251,15 +431,44 @@ Authorization: Bearer <token>
 - `price` (string, decimal)
 - `bedrooms` (number)
 - `bathrooms` (enum: "private" | "shared")
+- `floor` (integer)
+- `total_parts` (integer)
+
+**Optional Fields:**
 - `description` (string)
 - `photos_url` (array of strings)
 - `location_on_map` (string)
 - `facilities_amenities` (string)
-- `floor` (number)
-- `total_parts` (number)
-- `contact_number` (string)
 
-#### PUT `/apartments/rent/{apartment_id}`
+**Response:**
+```json
+{
+  "id": 1,
+  "name": "Luxury Studio in Maadi",
+  "location": "maadi",
+  "address": "123 Maadi Corniche, Cairo, Egypt",
+  "area": "50.0",
+  "number": "S-301",
+  "price": "4000.00",
+  "bedrooms": 1,
+  "bathrooms": "private",
+  "description": "Luxury studio with modern amenities",
+  "photos_url": [
+    "https://example.com/photos/luxury-studio-1.jpg",
+    "https://example.com/photos/luxury-studio-2.jpg"
+  ],
+  "location_on_map": "https://maps.google.com/example3",
+  "facilities_amenities": "24/7 Security, Elevator, Balcony, Air Conditioning, Gym",
+  "floor": 8,
+  "total_parts": 2,
+  "contact_number": "+201234567890",
+  "listed_by_admin_id": 1,
+  "created_at": "2025-09-05T20:25:15",
+  "updated_at": null
+}
+```
+
+#### PUT `/api/v1/apartments/rent/{apartment_id}`
 **Purpose:** Update rent apartment (admin only)
 
 **Authorization Rules:**
@@ -278,7 +487,7 @@ Authorization: Bearer <token>
 **Error Cases:**
 - `403`: "Only the admin who created the apartment can update it"
 
-#### DELETE `/apartments/rent/{apartment_id}`
+#### DELETE `/api/v1/apartments/rent/{apartment_id}`
 **Purpose:** Delete rent apartment (admin only)
 
 **Authorization Rules:**
@@ -287,7 +496,7 @@ Authorization: Bearer <token>
 
 ### Sale Apartment Endpoints
 
-#### GET `/apartments/sale`
+#### GET `/api/v1/apartments/sale`
 **Purpose:** Get list of all sale apartments
 
 **Query Parameters:**
@@ -314,8 +523,6 @@ Authorization: Bearer <token>
     ],
     "location_on_map": "https://maps.google.com/example4",
     "facilities_amenities": "Garden, Parking, Security, Air Conditioning",
-    "floor": 1,
-    "total_parts": 1,
     "contact_number": "+201234567890",
     "listed_by_admin_id": 1,
     "created_at": "2025-09-05T20:35:10",
@@ -324,7 +531,7 @@ Authorization: Bearer <token>
 ]
 ```
 
-#### GET `/apartments/sale/{apartment_id}`
+#### GET `/api/v1/apartments/sale/{apartment_id}`
 **Purpose:** Get specific sale apartment by ID
 
 **Response:**
@@ -346,8 +553,6 @@ Authorization: Bearer <token>
   ],
   "location_on_map": "https://maps.google.com/example4",
   "facilities_amenities": "Garden, Parking, Security, Air Conditioning",
-  "floor": 1,
-  "total_parts": 1,
   "contact_number": "+201234567890",
   "listed_by_admin_id": 1,
   "created_at": "2025-09-05T20:35:10",
@@ -355,7 +560,7 @@ Authorization: Bearer <token>
 }
 ```
 
-#### POST `/apartments/sale`
+#### POST `/api/v1/apartments/sale`
 **Purpose:** Create new sale apartment (admin only)
 
 **Request:**
@@ -375,10 +580,7 @@ Authorization: Bearer <token>
     "https://example.com/photos/apartment-2.jpg"
   ],
   "location_on_map": "https://maps.google.com/example5",
-  "facilities_amenities": "Elevator, Security, Air Conditioning",
-  "floor": 3,
-  "total_parts": 1,
-  "contact_number": "+201234567890"
+  "facilities_amenities": "Elevator, Security, Air Conditioning"
 }
 ```
 
@@ -401,8 +603,6 @@ Authorization: Bearer <token>
   ],
   "location_on_map": "https://maps.google.com/example5",
   "facilities_amenities": "Elevator, Security, Air Conditioning",
-  "floor": 3,
-  "total_parts": 1,
   "contact_number": "+201234567890",
   "listed_by_admin_id": 1,
   "created_at": "2025-09-05T20:40:25",
@@ -410,7 +610,7 @@ Authorization: Bearer <token>
 }
 ```
 
-#### PUT `/apartments/sale/{apartment_id}`
+#### PUT `/api/v1/apartments/sale/{apartment_id}`
 **Purpose:** Update sale apartment (admin only)
 
 **Authorization Rules:**
@@ -454,7 +654,7 @@ Authorization: Bearer <token>
 }
 ```
 
-#### DELETE `/apartments/sale/{apartment_id}`
+#### DELETE `/api/v1/apartments/sale/{apartment_id}`
 **Purpose:** Delete sale apartment (admin only)
 
 **Authorization Rules:**
@@ -470,7 +670,7 @@ Authorization: Bearer <token>
 
 ### Apartment Parts (Studios) Management
 
-#### GET `/apartments/parts`
+#### GET `/api/v1/apartments/parts`
 **Purpose:** Get list of all apartment parts
 
 **Query Parameters:**
@@ -483,10 +683,17 @@ Authorization: Bearer <token>
   {
     "id": 1,
     "apartment_id": 1,
-    "studio_number": "S-101",
-    "rent_value": "3500.00",
     "status": "available",
+    "title": "Studio S-101",
+    "area": "30.00",
     "floor": 5,
+    "monthly_price": "3500.00",
+    "bedrooms": 1,
+    "bathrooms": "private",
+    "furnished": "yes",
+    "balcony": "yes",
+    "description": "Modern studio with great amenities",
+    "photos_url": ["https://example.com/studio1.jpg"],
     "created_by_admin_id": 1,
     "created_at": "2025-09-05T20:50:15",
     "updated_at": null
@@ -494,7 +701,7 @@ Authorization: Bearer <token>
 ]
 ```
 
-#### GET `/apartments/parts/{part_id}`
+#### GET `/api/v1/apartments/parts/{part_id}`
 **Purpose:** Get specific apartment part by ID
 
 **Response:**
@@ -502,25 +709,40 @@ Authorization: Bearer <token>
 {
   "id": 1,
   "apartment_id": 1,
-  "studio_number": "S-101",
-  "rent_value": "3500.00",
   "status": "available",
+  "title": "Studio S-101",
+  "area": "30.00",
   "floor": 5,
+  "monthly_price": "3500.00",
+  "bedrooms": 1,
+  "bathrooms": "private",
+  "furnished": "yes",
+  "balcony": "yes",
+  "description": "Modern studio with great amenities",
+  "photos_url": ["https://example.com/studio1.jpg"],
   "created_by_admin_id": 1,
   "created_at": "2025-09-05T20:50:15",
   "updated_at": null
 }
 ```
 
-#### POST `/apartments/rent/{apartment_id}/parts`
+#### POST `/api/v1/apartments/rent/{apartment_id}/parts`
 **Purpose:** Create new apartment part for rent apartment (admin only)
 
 **Request:**
 ```json
 {
-  "studio_number": "S-102",
-  "rent_value": "3800.00",
-  "floor": 6
+  "title": "Studio S-102",
+  "area": "35.00",
+  "monthly_price": "3800.00",
+  "bedrooms": 1,
+  "bathrooms": "private",
+  "furnished": "yes",
+  "balcony": "no",
+  "description": "Spacious studio with modern amenities",
+  "photos_url": [
+    "https://example.com/photos/studio-1.jpg"
+  ]
 }
 ```
 
@@ -529,10 +751,19 @@ Authorization: Bearer <token>
 {
   "id": 2,
   "apartment_id": 1,
-  "studio_number": "S-102",
-  "rent_value": "3800.00",
   "status": "available",
-  "floor": 6,
+  "title": "Studio S-102",
+  "area": "35.00",
+  "floor": 5,
+  "monthly_price": "3800.00",
+  "bedrooms": 1,
+  "bathrooms": "private",
+  "furnished": "yes",
+  "balcony": "no",
+  "description": "Spacious studio with modern amenities",
+  "photos_url": [
+    "https://example.com/photos/studio-1.jpg"
+  ],
   "created_by_admin_id": 1,
   "created_at": "2025-09-05T20:55:20",
   "updated_at": null
@@ -543,7 +774,7 @@ Authorization: Bearer <token>
 - Master admin: Can create parts for any apartment
 - Regular admin: Can only create parts for apartments they created
 
-#### PUT `/apartments/parts/{part_id}`
+#### PUT `/api/v1/apartments/parts/{part_id}`
 **Purpose:** Update apartment part (admin only)
 
 **Authorization Rules:**
@@ -553,8 +784,8 @@ Authorization: Bearer <token>
 **Request:**
 ```json
 {
-  "studio_number": "S-102A",
-  "rent_value": "4000.00",
+  "title": "Studio S-102A",
+  "monthly_price": "4000.00",
   "status": "rented"
 }
 ```
@@ -564,17 +795,24 @@ Authorization: Bearer <token>
 {
   "id": 2,
   "apartment_id": 1,
-  "studio_number": "S-102A",
-  "rent_value": "4000.00",
   "status": "rented",
-  "floor": 6,
+  "title": "Studio S-102A",
+  "area": "35.00",
+  "floor": 5,
+  "monthly_price": "4000.00",
+  "bedrooms": 1,
+  "bathrooms": "private",
+  "furnished": "yes",
+  "balcony": "no",
+  "description": "Spacious studio with modern amenities",
+  "photos_url": null,
   "created_by_admin_id": 1,
   "created_at": "2025-09-05T20:55:20",
   "updated_at": "2025-09-05T21:00:25"
 }
 ```
 
-#### DELETE `/apartments/parts/{part_id}`
+#### DELETE `/api/v1/apartments/parts/{part_id}`
 **Purpose:** Delete apartment part (admin only)
 
 **Authorization Rules:**
@@ -584,13 +822,38 @@ Authorization: Bearer <token>
 **Response:**
 ```json
 {
-  "message": "Apartment part deleted successfully"
+  "id": 2,
+  "apartment_id": 1,
+  "status": "rented",
+  "title": "Studio S-102A",
+  "area": "35.00",
+  "floor": 5,
+  "monthly_price": "4000.00",
+  "bedrooms": 1,
+  "bathrooms": "private",
+  "furnished": "yes",
+  "balcony": "no",
+  "description": "Spacious studio with modern amenities",
+  "photos_url": null,
+  "created_by_admin_id": 1,
+  "created_at": "2025-09-05T20:55:20",
+  "updated_at": "2025-09-05T21:00:25"
+}
+```
+
+#### GET `/api/v1/apartments/rent/{apartment_id}/whatsapp`
+**Purpose:** Get admin's phone number for apartment inquiry (accessible by guests)
+
+**Response:**
+```json
+{
+  "admin_phone": "+201234567890"
 }
 ```
 
 ### Admin's Own Content
 
-#### GET `/apartments/my-content`
+#### GET `/api/v1/apartments/my-content`
 **Purpose:** Get apartments and studios created by the requesting admin
 
 **Behavior:**
@@ -619,8 +882,6 @@ Authorization: Bearer <token>
       "photos_url": ["https://example.com/test1.jpg"],
       "location_on_map": "https://maps.google.com/test",
       "facilities_amenities": "Test amenities",
-      "floor": 1,
-      "total_parts": 1,
       "contact_number": "+201111111111",
       "listed_by_admin_id": 1,
       "created_at": "2025-09-05T21:01:51",
@@ -662,8 +923,6 @@ Authorization: Bearer <token>
       "photos_url": ["https://example.com/sale1.jpg"],
       "location_on_map": "https://maps.google.com/sale",
       "facilities_amenities": "Elevator, Security, Air Conditioning",
-      "floor": 3,
-      "total_parts": 1,
       "contact_number": "+201234567890",
       "listed_by_admin_id": 1,
       "created_at": "2025-09-05T20:40:25",
@@ -678,7 +937,7 @@ Authorization: Bearer <token>
 
 ### Rental Contracts Management
 
-#### GET `/rental-contracts/`
+#### GET `/api/v1/rental-contracts/`
 **Purpose:** Get list of all rental contracts (admin only)
 
 **Query Parameters:**
@@ -703,7 +962,6 @@ Authorization: Bearer <token>
     "rent_end_date": "2026-08-31",
     "rent_period": 12,
     "contract_url": "https://example.com/contracts/contract1.pdf",
-    "studio_number": "S-101",
     "customer_id_url": "https://example.com/documents/id1.jpg",
     "commission": "350.00",
     "rent_price": "3500.00",
@@ -715,7 +973,7 @@ Authorization: Bearer <token>
 ]
 ```
 
-#### GET `/rental-contracts/by-studio`
+#### GET `/api/v1/rental-contracts/by-studio`
 **Purpose:** Get rental contracts ordered by studio number (latest first)
 
 **Query Parameters:**
@@ -740,7 +998,6 @@ Authorization: Bearer <token>
     "rent_end_date": "2026-09-30",
     "rent_period": 12,
     "contract_url": "https://example.com/contracts/contract3.pdf",
-    "studio_number": "S-103",
     "customer_id_url": "https://example.com/documents/id3.jpg",
     "commission": "400.00",
     "rent_price": "4000.00",
@@ -762,7 +1019,6 @@ Authorization: Bearer <token>
     "rent_end_date": "2026-09-14",
     "rent_period": 12,
     "contract_url": "https://example.com/contracts/contract2.pdf",
-    "studio_number": "S-102",
     "customer_id_url": "https://example.com/documents/id2.jpg",
     "commission": "380.00",
     "rent_price": "3800.00",
@@ -774,7 +1030,7 @@ Authorization: Bearer <token>
 ]
 ```
 
-#### GET `/rental-contracts/{contract_id}`
+#### GET `/api/v1/rental-contracts/{contract_id}`
 **Purpose:** Get specific rental contract by ID
 
 **Response:**
@@ -792,7 +1048,6 @@ Authorization: Bearer <token>
   "rent_end_date": "2026-08-31",
   "rent_period": 12,
   "contract_url": "https://example.com/contracts/contract1.pdf",
-  "studio_number": "S-101",
   "customer_id_url": "https://example.com/documents/id1.jpg",
   "commission": "350.00",
   "rent_price": "3500.00",
@@ -803,7 +1058,7 @@ Authorization: Bearer <token>
 }
 ```
 
-#### POST `/rental-contracts/`
+#### POST `/api/v1/rental-contracts/`
 **Purpose:** Create new rental contract (admin only)
 
 **Request:**
@@ -820,12 +1075,29 @@ Authorization: Bearer <token>
   "rent_end_date": "2026-09-30",
   "rent_period": 12,
   "contract_url": "https://example.com/contracts/contract2.pdf",
-  "studio_number": "S-102",
   "customer_id_url": "https://example.com/documents/id2.jpg",
   "commission": "380.00",
   "rent_price": "3800.00"
 }
 ```
+
+**Required Fields:**
+- `apartment_part_id` (integer)
+- `customer_name` (string)
+- `customer_phone` (string)
+- `customer_id_number` (string)
+- `how_did_customer_find_us` (enum: "facebook" | "instagram" | "google" | "referral" | "walk_in" | "other")
+- `paid_deposit` (decimal as string)
+- `warrant_amount` (decimal as string)
+- `rent_start_date` (date: "YYYY-MM-DD")
+- `rent_end_date` (date: "YYYY-MM-DD")
+- `rent_period` (integer: months)
+- `commission` (decimal as string)
+- `rent_price` (decimal as string)
+
+**Optional Fields:**
+- `contract_url` (string: URL to contract document)
+- `customer_id_url` (string: URL to customer ID document)
 
 **Response:**
 ```json
@@ -842,7 +1114,6 @@ Authorization: Bearer <token>
   "rent_end_date": "2026-09-30",
   "rent_period": 12,
   "contract_url": "https://example.com/contracts/contract2.pdf",
-  "studio_number": "S-102",
   "customer_id_url": "https://example.com/documents/id2.jpg",
   "commission": "380.00",
   "rent_price": "3800.00",
@@ -857,7 +1128,7 @@ Authorization: Bearer <token>
 - Master admin: Can create contracts for any apartment
 - Regular admin: Can only create contracts for apartments they created
 
-#### PUT `/rental-contracts/{contract_id}`
+#### PUT `/api/v1/rental-contracts/{contract_id}`
 **Purpose:** Update rental contract (admin only)
 
 **Request:**
@@ -884,7 +1155,6 @@ Authorization: Bearer <token>
   "rent_end_date": "2026-09-30",
   "rent_period": 12,
   "contract_url": "https://example.com/contracts/contract2.pdf",
-  "studio_number": "S-102",
   "customer_id_url": "https://example.com/documents/id2.jpg",
   "commission": "380.00",
   "rent_price": "4000.00",
@@ -895,7 +1165,7 @@ Authorization: Bearer <token>
 }
 ```
 
-#### DELETE `/rental-contracts/{contract_id}`
+#### DELETE `/api/v1/rental-contracts/{contract_id}`
 **Purpose:** Delete rental contract (super admin only)
 
 **Response:**
@@ -1103,8 +1373,7 @@ Content-Type: application/json
   "location_on_map": "https://maps.google.com/example3",
   "facilities_amenities": "24/7 Security, Elevator, Balcony, Air Conditioning, Gym",
   "floor": 8,
-  "total_parts": 2,
-  "contact_number": "+201234567890"
+  "total_parts": 2
 }
 ```
 
@@ -1136,12 +1405,51 @@ Content-Type: application/json
 }
 ```
 
+### File Upload Endpoints
+
+#### POST `/api/v1/uploads/photos`
+**Purpose:** Upload photos for apartments/parts (admin only)
+
+**Request (Form Data):**
+```
+entity_id: 1
+entity_type: rent  // or "sale" or "part"
+files: [File1, File2, ...]
+```
+
+**Response:**
+```json
+{
+  "entity_id": 1,
+  "entity_type": "rent",
+  "count": 2,
+  "files": [
+    {
+      "key": "rent/1/abc123.jpg",
+      "url": "/uploads/rent/1/abc123.jpg"
+    },
+    {
+      "key": "rent/1/def456.jpg", 
+      "url": "/uploads/rent/1/def456.jpg"
+    }
+  ],
+  "folder_key": "rent/1/",
+  "saved_to_db": true
+}
+```
+
+**Notes:**
+- Files are automatically added to the entity's `photos_url` array
+- Supports multiple file upload
+- Files are stored with unique names to prevent conflicts
+- `entity_type` must be one of: "rent", "sale", "part"
+
 ## 🚨 Important Limitations
 
 ### 1. File Uploads
-- **No Direct File Upload**: API expects URLs to uploaded files
-- **Implementation**: Upload files to a file storage service first, then send URLs to API
-- **Recommended**: Use services like AWS S3, Cloudinary, or similar
+- **Direct File Upload Available**: Use `POST /uploads/photos` endpoint
+- **Alternative**: Upload files to external service first, then send URLs to API
+- **Supported**: Local storage (default) or AWS S3 (configurable)
 
 ### 2. Pagination
 - **Default Limit**: 100 records per request

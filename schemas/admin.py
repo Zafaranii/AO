@@ -49,20 +49,6 @@ class AdminLogin(BaseModel):
     password: str
 
 
-class PasswordVerification(BaseModel):
-    current_password: str
-
-
-class EmailUpdate(BaseModel):
-    new_email: EmailStr
-    current_password: str
-
-
-class PasswordUpdate(BaseModel):
-    new_password: str
-    current_password: str
-
-
 class MasterAdminCreate(BaseModel):
     full_name: str
     email: EmailStr
