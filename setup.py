@@ -73,9 +73,10 @@ def setup_sample_data(super_admin: Admin):
     """Create some sample data for testing."""
     db = SessionLocal()
     try:
-        from models import ApartmentRent, ApartmentSale
-        from models.enums import LocationEnum, BathroomTypeEnum
+        from models import ApartmentRent, ApartmentSale, ApartmentPart, RentalContract
+        from models.enums import LocationEnum, BathroomTypeEnum, FurnishedEnum, BalconyEnum, PartStatusEnum, CustomerSourceEnum
         import json
+        from datetime import date, timedelta
 
         # Check if sample data already exists
         existing_apartment = db.query(ApartmentRent).first()
@@ -156,12 +157,88 @@ def setup_sample_data(super_admin: Admin):
 
         for apartment in sample_rent_apartments:
             db.add(apartment)
-
         for apartment in sample_sale_apartments:
             db.add(apartment)
 
         db.commit()
-        print("Sample apartments created successfully!")
+
+        # Refresh to get IDs
+        for apartment in sample_rent_apartments:
+            db.refresh(apartment)
+
+        # Create apartment parts for the first rent apartment
+        primary_rent_apartment = sample_rent_apartments[0]
+        parts = [
+            ApartmentPart(
+                apartment_id=primary_rent_apartment.id,
+                status=PartStatusEnum.available,
+                title="Studio S-301-A",
+                area=30.0,
+                floor=primary_rent_apartment.floor,
+                monthly_price=3500.00,
+                bedrooms=1,
+                bathrooms=BathroomTypeEnum.private,
+                furnished=FurnishedEnum.yes,
+                balcony=BalconyEnum.yes,
+                description="Cozy studio with balcony and AC",
+                photos_url=json.dumps([
+                    "https://example.com/photos/studio-a1.jpg"
+                ]),
+                created_by_admin_id=admin_id,
+            ),
+            ApartmentPart(
+                apartment_id=primary_rent_apartment.id,
+                status=PartStatusEnum.rented,
+                title="Studio S-301-B",
+                area=28.0,
+                floor=primary_rent_apartment.floor,
+                monthly_price=3400.00,
+                bedrooms=1,
+                bathrooms=BathroomTypeEnum.private,
+                furnished=FurnishedEnum.no,
+                balcony=BalconyEnum.no,
+                description="Bright studio, great value",
+                photos_url=json.dumps([
+                    "https://example.com/photos/studio-b1.jpg"
+                ]),
+                created_by_admin_id=admin_id,
+            ),
+        ]
+
+        for part in parts:
+            db.add(part)
+        db.commit()
+        for part in parts:
+            db.refresh(part)
+
+        # Create a rental contract for the rented part (second part)
+        rented_part = parts[1]
+        start_date = date.today().replace(day=1)
+        end_date = start_date + timedelta(days=365)
+
+        contract = RentalContract(
+            apartment_part_id=rented_part.id,
+            customer_name="John Doe",
+            customer_phone="+201234567890",
+            customer_id_number="12345678901234",
+            how_did_customer_find_us=CustomerSourceEnum.facebook,
+            paid_deposit=3400.00,
+            warrant_amount=3400.00,
+            rent_start_date=start_date,
+            rent_end_date=end_date,
+            rent_period=12,
+            contract_url="https://example.com/contracts/sample1.pdf",
+            customer_id_url="https://example.com/documents/id1.jpg",
+            commission=340.00,
+            rent_price=3400.00,
+            is_active=True,
+            created_by_admin_id=admin_id,
+        )
+
+        db.add(contract)
+        db.commit()
+
+        print("Sample apartments, parts, and rental contract created successfully!")
 
     except Exception as e:
         print(f"Error creating sample data: {e}")
