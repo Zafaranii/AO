@@ -16,10 +16,25 @@ from schemas.apartment_part import (
 )
 from schemas.auth import WhatsAppLinkResponse
 from crud import (
-    get_apartments_sale, get_apartment_sale, create_apartment_sale, update_apartment_sale, delete_apartment_sale, get_apartments_sale_by_admin,
-    get_apartments_rent, get_apartment_rent, create_apartment_rent, update_apartment_rent, delete_apartment_rent, get_apartments_rent_by_admin, get_apartments_with_parts_by_admin,
-    get_apartment_parts, get_apartment_part, create_apartment_part, update_apartment_part, delete_apartment_part,
-    get_admin_phone_for_whatsapp
+    get_admin_phone_for_whatsapp,
+    get_apartments_rent,
+    get_apartment_rent,
+    create_apartment_rent,
+    update_apartment_rent,
+    delete_apartment_rent,
+    get_apartments_rent_by_admin,
+    get_apartments_with_parts_by_admin,
+    get_apartment_parts,
+    get_apartment_part,
+    create_apartment_part,
+    update_apartment_part,
+    delete_apartment_part,
+    get_apartments_sale,
+    get_apartment_sale,
+    create_apartment_sale,
+    update_apartment_sale,
+    delete_apartment_sale,
+    get_apartments_sale_by_admin,
 )
 from dependencies import get_current_admin_or_super_admin, get_current_super_admin
 

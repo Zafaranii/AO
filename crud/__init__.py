@@ -51,7 +51,7 @@ from .rental_contracts import (
     get_expiring_contracts,
 )
 
-from .aux import (
+from .utils import (
     get_admin_phone_for_whatsapp,
 )
 
