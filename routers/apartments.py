@@ -16,25 +16,10 @@ from schemas.apartment_part import (
 )
 from schemas.auth import WhatsAppLinkResponse
 from crud import (
-    get_admin_phone_for_whatsapp,
-    get_apartments_rent,
-    get_apartment_rent,
-    create_apartment_rent,
-    update_apartment_rent,
-    delete_apartment_rent,
-    get_apartments_rent_by_admin,
-    get_apartments_with_parts_by_admin,
-    get_apartment_parts,
-    get_apartment_part,
-    create_apartment_part,
-    update_apartment_part,
-    delete_apartment_part,
-    get_apartments_sale,
-    get_apartment_sale,
-    create_apartment_sale,
-    update_apartment_sale,
-    delete_apartment_sale,
-    get_apartments_sale_by_admin,
+    get_apartments_sale, get_apartment_sale, create_apartment_sale, update_apartment_sale, delete_apartment_sale as crud_delete_apartment_sale, get_apartments_sale_by_admin,
+    get_apartments_rent, get_apartment_rent, create_apartment_rent, update_apartment_rent, delete_apartment_rent, get_apartments_rent_by_admin, get_apartments_with_parts_by_admin,
+    get_apartment_parts, get_apartment_part, create_apartment_part, update_apartment_part, delete_apartment_part,
+    get_admin_phone_for_whatsapp
 )
 from dependencies import get_current_admin_or_super_admin, get_current_super_admin
 
@@ -91,7 +76,7 @@ async def delete_apartment_sale(
     current_admin: Admin = Depends(get_current_admin_or_super_admin)
 ):
     try:
-        db_apartment = delete_apartment_sale(
+        db_apartment = crud_delete_apartment_sale(
             db, 
             apartment_id=apartment_id,
             current_admin_id=current_admin.id,
@@ -297,12 +282,15 @@ async def get_whatsapp_contact(
     clean_phone = ''.join(c for c in admin_phone if c.isdigit() or c == '+')
     
     # Create WhatsApp message
-    # message = f"Hello! I'm interested in the apartment: {apartment.name} located at {apartment.location}. Could you please provide more information?"
-    # encoded_message = urllib.parse.quote(message)
-    # whatsapp_url = f"https://wa.me/{clean_phone}?text={encoded_message}"
+    message = f"Hello! I'm interested in the apartment: {apartment.name} located at {apartment.location}. Could you please provide more information?"
+    encoded_message = urllib.parse.quote(message)
+    
+    whatsapp_url = f"https://wa.me/{clean_phone}?text={encoded_message}"
     
     return {
-        "admin_phone": admin_phone
+        "whatsapp_url": whatsapp_url,
+        "admin_phone": admin_phone,
+        "message": message
     }
 
 @router.get("/parts", response_model=List[ApartmentPartResponse])

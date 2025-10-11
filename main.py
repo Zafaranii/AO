@@ -8,7 +8,6 @@ from contextlib import asynccontextmanager
 # Import routers
 from routers import auth, apartments, admins, rental_contracts
 from routers import uploads as uploads_router
-from background_jobs import start_scheduler, stop_scheduler
 from database import engine, Base
 
 # Set up logging
@@ -34,7 +33,6 @@ async def lifespan(app: FastAPI):
     try:
         # Ensure tables are created on every startup
         create_tables()
-        start_scheduler()
         logger.info("Server started successfully")
     except Exception as e:
         logger.error(f"Failed to start server: {e}")
@@ -42,7 +40,6 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown
     logger.info("Shutting down server...")
-    stop_scheduler()
     logger.info("Server shutdown complete")
 
 app = FastAPI(
