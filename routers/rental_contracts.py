@@ -108,9 +108,9 @@ async def update_rental_contract_details(
 async def delete_rental_contract_by_id(
     contract_id: int,
     db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_super_admin)
+    current_admin: Admin = Depends(get_current_admin_or_super_admin)
 ):
-    """Delete rental contract (super admin only)."""
+    """Delete rental contract (admin and super admin)."""
     db_contract = delete_rental_contract(db, contract_id=contract_id)
     if db_contract is None:
         raise HTTPException(status_code=404, detail="Rental contract not found")
