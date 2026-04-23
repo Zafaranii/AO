@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from database import Base
-from .enums import LocationEnum, BathroomTypeEnum
+from .enums import BathroomTypeEnum
 
 
 class ApartmentRent(Base):
@@ -12,7 +12,7 @@ class ApartmentRent(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(200), nullable=False)
-    location = Column(Enum(LocationEnum), nullable=False)
+    location = Column(String(255), nullable=False)
     address = Column(String(500), nullable=False)
     area = Column(Numeric(8, 2), nullable=False)  # Area in square meters
     number = Column(String(50), nullable=False)  # Apartment number

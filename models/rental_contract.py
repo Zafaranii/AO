@@ -15,7 +15,13 @@ class RentalContract(Base):
     customer_name = Column(String(100), nullable=False)
     customer_phone = Column(String(20), nullable=False)
     customer_id_number = Column(String(50), nullable=False)
-    how_did_customer_find_us = Column(Enum(CustomerSourceEnum), nullable=False)
+    how_did_customer_find_us = Column(
+        Enum(
+            CustomerSourceEnum,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        nullable=False,
+    )
     paid_deposit = Column(Numeric(10, 2), nullable=False)
     warrant_amount = Column(Numeric(10, 2), nullable=False)
     rent_start_date = Column(Date, nullable=False)

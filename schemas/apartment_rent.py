@@ -6,12 +6,12 @@ import json
 
 from .apartment_part import ApartmentPartResponse
 from .apartment_sale import ApartmentSaleResponse
-from .enums import LocationEnum, BathroomTypeEnum
+from .enums import BathroomTypeEnum
 
 
 class ApartmentRentBase(BaseModel):
     name: str
-    location: LocationEnum
+    location: str
     address: str
     area: Decimal
     number: str
@@ -44,7 +44,7 @@ class ApartmentRentCreate(ApartmentRentBase):
 
 class ApartmentRentUpdate(BaseModel):
     name: Optional[str] = None
-    location: Optional[LocationEnum] = None
+    location: Optional[str] = None
     address: Optional[str] = None
     area: Optional[Decimal] = None
     number: Optional[str] = None

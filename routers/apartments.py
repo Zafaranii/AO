@@ -16,7 +16,7 @@ from schemas.apartment_part import (
 )
 from schemas.auth import WhatsAppLinkResponse
 from crud import (
-    get_apartments_sale, get_apartment_sale, create_apartment_sale, update_apartment_sale, delete_apartment_sale as crud_delete_apartment_sale, get_apartments_sale_by_admin,
+    get_apartments_sale, get_apartment_sale, create_apartment_sale, update_apartment_sale as crud_update_apartment_sale, delete_apartment_sale as crud_delete_apartment_sale, get_apartments_sale_by_admin,
     get_apartments_rent, get_apartment_rent, create_apartment_rent, update_apartment_rent, delete_apartment_rent, get_apartments_rent_by_admin, get_apartments_with_parts_by_admin,
     get_apartment_parts, get_apartment_part, create_apartment_part, update_apartment_part, delete_apartment_part,
     get_admin_phone_for_whatsapp
@@ -46,14 +46,14 @@ async def create_apartment_sale_endpoint(
     return create_apartment_sale(db=db, apartment=apartment, admin_id=current_admin.id, admin_phone=current_admin.phone)
 
 @router.put("/sale/{apartment_id}", response_model=ApartmentSaleResponse)
-async def update_apartment_sale(
+async def update_apartment_sale_endpoint(
     apartment_id: int,
     apartment: ApartmentSaleUpdate,
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin_or_super_admin)
 ):
     try:
-        db_apartment = update_apartment_sale(
+        db_apartment = crud_update_apartment_sale(
             db, 
             apartment_id=apartment_id, 
             apartment=apartment,

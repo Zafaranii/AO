@@ -44,7 +44,7 @@ Content-Type: application/json
 | `total_studios` | `total_parts` | Number of parts in apartment |
 
 **Enum Values (Case Sensitive):**
-- `location`: `"maadi"` | `"mokkattam"` (lowercase)
+- `location`: any string (for example: `"maadi"`, `"mokkattam"`, `"new cairo"`)
 - `bathrooms`: `"shared"` | `"private"` (string, not integer)
 - `furnished`: `"yes"` | `"no"`
 - `balcony`: `"yes"` | `"shared"` | `"no"`
@@ -54,7 +54,7 @@ Content-Type: application/json
 
 **Required Fields for Apartment Creation:**
 - ✅ `name` (not `title`)
-- ✅ `location` (lowercase enum)
+- ✅ `location` (string)
 - ✅ `address`
 - ✅ `area` (decimal as string)
 - ✅ `number` (apartment number)
@@ -82,7 +82,7 @@ Content-Type: application/json
 
 **Frequent Issues:**
 1. **Missing `name` field** - Frontend sends `title`, API expects `name`
-2. **Wrong `location` case** - Use `"mokkattam"` not `"Mokkattam"`
+2. **Wrong `location` type** - Send a string value for `location`
 3. **Wrong `bathrooms` type** - Use `"private"` not `1`
 4. **Missing required fields** - `floor` and `total_parts` for rent apartments
 5. **Auto-filled fields** - Don't send `contact_number`, it's auto-filled
@@ -424,7 +424,7 @@ Authorization: Bearer <token>
 
 **Required Fields:**
 - `name` (string)
-- `location` (enum: "maadi" | "mokkattam")
+- `location` (string)
 - `address` (string)
 - `area` (string, decimal)
 - `number` (string)
@@ -1495,7 +1495,7 @@ Content-Type: application/json
 ### 3. Data Validation Rules
 **Apartment Creation:**
 - `name`: Required, non-empty string
-- `location`: Required, must be "maadi" or "mokkattam"
+- `location`: Required, non-empty string
 - `price`: Required, must be a valid decimal number
 - `photos_url`: Required, must be array with at least one URL
 - `bedrooms`: Required, must be positive integer

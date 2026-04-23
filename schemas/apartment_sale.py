@@ -4,12 +4,12 @@ from datetime import datetime
 from decimal import Decimal
 import json
 
-from .enums import LocationEnum, BathroomTypeEnum
+from .enums import BathroomTypeEnum
 
 
 class ApartmentSaleBase(BaseModel):
     name: str
-    location: LocationEnum
+    location: str
     address: str
     area: Decimal
     number: str
@@ -40,7 +40,7 @@ class ApartmentSaleCreate(ApartmentSaleBase):
 
 class ApartmentSaleUpdate(BaseModel):
     name: Optional[str] = None
-    location: Optional[LocationEnum] = None
+    location: Optional[str] = None
     address: Optional[str] = None
     area: Optional[Decimal] = None
     number: Optional[str] = None

@@ -178,9 +178,8 @@ This guide provides comprehensive test data and examples for all API endpoints i
 
 ## Enum Values
 
-### LocationEnum
-- `maadi`
-- `mokkattam`
+### Location
+- Any string value is accepted (for example: `maadi`, `mokkattam`, `new cairo`)
 
 ### BathroomTypeEnum
 - `shared`

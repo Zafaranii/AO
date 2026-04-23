@@ -97,7 +97,7 @@ def setup_sample_data(super_admin: Admin):
     db = SessionLocal()
     try:
         from models import ApartmentRent, ApartmentSale, ApartmentPart, RentalContract
-        from models.enums import LocationEnum, BathroomTypeEnum, FurnishedEnum, BalconyEnum, PartStatusEnum, CustomerSourceEnum
+        from models.enums import BathroomTypeEnum, FurnishedEnum, BalconyEnum, PartStatusEnum, CustomerSourceEnum
         import json
         from datetime import date, timedelta
 
@@ -111,7 +111,7 @@ def setup_sample_data(super_admin: Admin):
         sample_rent_apartments = [
             ApartmentRent(
                 name="Luxury Studio in Maadi",
-                location=LocationEnum.maadi,
+                location="maadi",
                 address="123 Maadi Corniche, Cairo, Egypt",
                 area=50.0,
                 number="S-301",
@@ -132,7 +132,7 @@ def setup_sample_data(super_admin: Admin):
             ),
             ApartmentRent(
                 name="Student Housing Complex",
-                location=LocationEnum.mokkattam,
+                location="mokkattam",
                 address="45 University District, Cairo, Egypt",
                 area=35.0,
                 number="S-102",
@@ -156,7 +156,7 @@ def setup_sample_data(super_admin: Admin):
         sample_sale_apartments = [
             ApartmentSale(
                 name="Family House for Sale",
-                location=LocationEnum.mokkattam,
+                location="mokkattam",
                 address="789 Green Valley, Cairo, Egypt",
                 area=120.5,
                 number="V-101",

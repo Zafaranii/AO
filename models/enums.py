@@ -29,15 +29,13 @@ class BalconyEnum(enum.Enum):
     no = "no"
 
 
-class LocationEnum(enum.Enum):
-    maadi = "maadi"
-    mokkattam = "mokkattam"
-
-
 class CustomerSourceEnum(enum.Enum):
     facebook = "facebook"
     instagram = "instagram"
     google = "google"
+    bayut = "Bayut"
+    aqar_map = "Aqar map"
+    dubizzle = "Dubizzle"
     referral = "referral"
     walk_in = "walk_in"
     other = "other"
