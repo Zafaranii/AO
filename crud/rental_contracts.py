@@ -103,8 +103,8 @@ def get_rental_contracts_by_studio_ordered(
     if is_active is not None:
         query = query.filter(RentalContract.is_active == is_active)
     
-    # Order by studio_number descending (latest first)
-    return query.order_by(RentalContract.studio_number.desc()).offset(skip).limit(limit).all()
+    # Latest first (RentalContract has no studio_number column)
+    return query.order_by(RentalContract.created_at.desc(), RentalContract.id.desc()).offset(skip).limit(limit).all()
 
 
 def get_expiring_contracts(db: Session, days_ahead: int = 30):
