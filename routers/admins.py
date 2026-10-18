@@ -58,19 +58,6 @@ async def create_new_admin(
         )
     return create_admin(db=db, admin=admin)
 
-@router.put("/{admin_id}", response_model=AdminResponse)
-async def update_admin_by_id(
-    admin_id: int,
-    admin: AdminUpdate,
-    db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_super_admin)
-):
-    """Update admin (super admin only)."""
-    db_admin = update_admin(db, admin_id=admin_id, admin=admin)
-    if db_admin is None:
-        raise HTTPException(status_code=404, detail="Admin not found")
-    return db_admin
-
 @router.put("/me", response_model=AdminResponse)
 async def update_current_admin(
     admin: AdminUpdate,
@@ -83,6 +70,19 @@ async def update_current_admin(
         admin.role = None
     
     db_admin = update_admin(db, admin_id=current_admin.id, admin=admin)
+    if db_admin is None:
+        raise HTTPException(status_code=404, detail="Admin not found")
+    return db_admin
+
+@router.put("/{admin_id}", response_model=AdminResponse)
+async def update_admin_by_id(
+    admin_id: int,
+    admin: AdminUpdate,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_super_admin)
+):
+    """Update admin (super admin only)."""
+    db_admin = update_admin(db, admin_id=admin_id, admin=admin)
     if db_admin is None:
         raise HTTPException(status_code=404, detail="Admin not found")
     return db_admin
