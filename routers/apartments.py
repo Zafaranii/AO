@@ -274,7 +274,7 @@ async def get_whatsapp_contact(
     if apartment is None:
         raise HTTPException(status_code=404, detail="Apartment not found")
     
-    admin_phone = get_admin_phone_for_whatsapp(db)
+    admin_phone = get_admin_phone_for_whatsapp(db, admin_id=apartment.listed_by_admin_id)
     if not admin_phone:
         raise HTTPException(status_code=500, detail="No admin contact available")
     
