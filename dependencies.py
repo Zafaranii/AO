@@ -11,7 +11,10 @@ from models import Admin, AdminRoleEnum
 from schemas.auth import TokenData
 
 # Security configuration
-SECRET_KEY = config("SECRET_KEY", default="your-secret-key-change-in-production")
+INSECURE_DEFAULT_SECRET = "your-secret-key-change-in-production"
+SECRET_KEY = config("SECRET_KEY", default=INSECURE_DEFAULT_SECRET)
+if config("ENVIRONMENT", default="development") == "production" and SECRET_KEY == INSECURE_DEFAULT_SECRET:
+    raise RuntimeError("SECRET_KEY must be set to a strong random value when ENVIRONMENT=production")
 ALGORITHM = config("ALGORITHM", default="HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = config("ACCESS_TOKEN_EXPIRE_MINUTES", default=30, cast=int)
 

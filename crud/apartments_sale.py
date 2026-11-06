@@ -3,6 +3,8 @@ import json
 
 from models import ApartmentSale
 from schemas.apartment_sale import ApartmentSaleCreate, ApartmentSaleUpdate
+from services.media import parse_urls, removed_urls
+from services.storage import get_storage_from_env, delete_urls_quietly
 
 
 def get_apartment_sale(db: Session, apartment_id: int):
@@ -30,7 +32,7 @@ def create_apartment_sale(db: Session, apartment: ApartmentSaleCreate, admin_id:
     apartment_data['contact_number'] = admin_phone
     
     # Convert photos_url list to JSON string
-    if apartment_data.get('photos_url'):
+    if apartment_data.get('photos_url') is not None:
         apartment_data['photos_url'] = json.dumps(apartment_data['photos_url'])
     
     db_apartment = ApartmentSale(**apartment_data)
@@ -50,6 +52,7 @@ def update_apartment_sale(db: Session, apartment_id: int, apartment: ApartmentSa
             raise ValueError("Only the admin who created the apartment can update it")
         
         update_data = apartment.dict(exclude_unset=True)
+        dropped = removed_urls(db_apartment.photos_url, update_data['photos_url']) if update_data.get('photos_url') is not None else []
         for field, value in update_data.items():
             if field == 'photos_url' and value is not None:
                 setattr(db_apartment, field, json.dumps(value))
@@ -57,6 +60,8 @@ def update_apartment_sale(db: Session, apartment_id: int, apartment: ApartmentSa
                 setattr(db_apartment, field, value)
         db.commit()
         db.refresh(db_apartment)
+        if dropped:
+            delete_urls_quietly(dropped)
     return db_apartment
 
 
@@ -69,8 +74,10 @@ def delete_apartment_sale(db: Session, apartment_id: int, current_admin_id: int 
         if current_admin_role != AdminRoleEnum.super_admin.value and current_admin_id and db_apartment.listed_by_admin_id != current_admin_id:
             raise ValueError("Only the admin who created the apartment can delete it")
         
+        urls = parse_urls(db_apartment.photos_url)
         db.delete(db_apartment)
         db.commit()
+        get_storage_from_env().delete_entity_files("sale", apartment_id, urls)
     return db_apartment
 
 

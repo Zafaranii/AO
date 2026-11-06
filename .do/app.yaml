@@ -1,0 +1,89 @@
+# DigitalOcean App Platform spec for the whole site (backend API + frontend + managed MySQL).
+# Edit the TODO values, then either:
+#   doctl apps create --spec .do/app.yaml
+# or paste it in the console (Apps > Create App > Edit your app spec).
+# I could not run this against DigitalOcean from here, so check the console's validation output.
+name: ayg-real-estate
+region: fra   # TODO: pick the region closest to your users (also put the MySQL cluster + Space here)
+
+services:
+  # ---- Backend: FastAPI -------------------------------------------------------------
+  - name: api
+    github:
+      repo: YOUR_GITHUB_USER/ao-backend   # TODO: the repo containing the AO backend
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: Dockerfile
+    http_port: 8000
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /health
+    # Served from the same domain as the website, so the browser never needs CORS.
+    routes:
+      - path: /api
+        preserve_path_prefix: true
+      - path: /uploads
+        preserve_path_prefix: true
+    envs:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        value: ${db.DATABASE_URL}
+      - key: SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET           # TODO: set in the console. python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "480"
+      # First super admin, created on first start if none exists. Change the password after logging in.
+      - key: BOOTSTRAP_ADMIN_NAME
+        value: Super Admin
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        value: admin@your-domain.com      # TODO
+      - key: BOOTSTRAP_ADMIN_PHONE
+        value: "01000000000"              # TODO
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        type: SECRET                      # TODO: set in the console
+      # File storage. App Platform disks are ephemeral, so files must live in a bucket.
+      # DigitalOcean Spaces is S3-compatible; for AWS S3 leave S3_ENDPOINT_URL empty.
+      - key: STORAGE_BACKEND
+        value: s3
+      - key: S3_BUCKET
+        value: YOUR_BUCKET                # TODO
+      - key: S3_REGION
+        value: fra1                       # TODO: AWS region (eu-central-1) or Spaces region (fra1)
+      - key: S3_ENDPOINT_URL
+        value: https://fra1.digitaloceanspaces.com   # TODO: remove this line for AWS S3
+      - key: S3_ACCESS_KEY_ID
+        type: SECRET                      # TODO
+      - key: S3_SECRET_ACCESS_KEY
+        type: SECRET                      # TODO
+      # - key: S3_PUBLIC_BASE_URL         # optional CDN / custom domain for photos
+
+  # ---- Frontend: React SSR (Express) ---------------------------------------------------
+  - name: web
+    github:
+      repo: YOUR_GITHUB_USER/ayg-frontend   # TODO: the repo containing the frontend
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: Dockerfile
+    http_port: 3000
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /health
+    routes:
+      - path: /
+    envs:
+      - key: SITE_URL
+        scope: RUN_TIME
+        value: ${APP_URL}
+
+# Managed MySQL. Create the cluster first (Databases > Create > MySQL 8), then put its name here so the
+# app is added to the cluster's trusted sources automatically.
+databases:
+  - name: db
+    engine: MYSQL
+    production: true
+    cluster_name: YOUR_MYSQL_CLUSTER   # TODO

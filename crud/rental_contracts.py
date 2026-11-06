@@ -4,6 +4,7 @@ from sqlalchemy import and_
 
 from models import RentalContract
 from schemas.rental_contract import RentalContractCreate, RentalContractUpdate
+from services.storage import get_storage_from_env, delete_urls_quietly
 
 
 def get_rental_contract(db: Session, contract_id: int):
@@ -50,6 +51,9 @@ def create_rental_contract(db: Session, contract: RentalContractCreate, created_
     if current_admin_role != AdminRoleEnum.super_admin.value and apartment.listed_by_admin_id != created_by_admin_id:
         raise ValueError("Only the admin who created the apartment can create contracts for its studios")
     
+    if get_rental_contract_by_part(db, contract.apartment_part_id):
+        raise ValueError("A rental contract already exists for this studio")
+
     # Create the rental contract
     db_contract = RentalContract(**contract.dict(), created_by_admin_id=created_by_admin_id)
     db.add(db_contract)
@@ -66,10 +70,17 @@ def update_rental_contract(db: Session, contract_id: int, contract: RentalContra
     db_contract = db.query(RentalContract).filter(RentalContract.id == contract_id).first()
     if db_contract:
         update_data = contract.dict(exclude_unset=True)
+        # documents that are replaced or cleared must also leave the bucket
+        replaced = [
+            getattr(db_contract, f) for f in ("contract_url", "customer_id_url")
+            if f in update_data and getattr(db_contract, f) and update_data[f] != getattr(db_contract, f)
+        ]
         for field, value in update_data.items():
             setattr(db_contract, field, value)
         db.commit()
         db.refresh(db_contract)
+        if replaced:
+            delete_urls_quietly(replaced)
     return db_contract
 
 
@@ -82,8 +93,10 @@ def delete_rental_contract(db: Session, contract_id: int):
         if apartment_part:
             apartment_part.status = PartStatusEnum.available
         
+        urls = [u for u in (db_contract.contract_url, db_contract.customer_id_url) if u]
         db.delete(db_contract)
         db.commit()
+        get_storage_from_env().delete_entity_files("rental_contract", contract_id, urls)
     return db_contract
 
 
@@ -113,8 +126,8 @@ def get_expiring_contracts(db: Session, days_ahead: int = 30):
     expiry_date = date.today() + timedelta(days=days_ahead)
     return db.query(RentalContract).filter(
         and_(
-            RentalContract.contract_end_date <= expiry_date,
-            RentalContract.contract_end_date >= date.today(),
+            RentalContract.rent_end_date <= expiry_date,
+            RentalContract.rent_end_date >= date.today(),
             RentalContract.is_active == True
         )
     ).all()

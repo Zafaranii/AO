@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 import json
 
 from models import ApartmentRent
+from services.media import parse_urls, removed_urls
+from services.storage import get_storage_from_env, delete_urls_quietly
 from schemas.apartment_rent import ApartmentRentCreate, ApartmentRentUpdate
 
 
@@ -88,7 +90,7 @@ def create_apartment_rent(db: Session, apartment: ApartmentRentCreate, listed_by
     apartment_data['contact_number'] = admin_phone
     
     # Convert photos_url list to JSON string
-    if apartment_data.get('photos_url'):
+    if apartment_data.get('photos_url') is not None:
         apartment_data['photos_url'] = json.dumps(apartment_data['photos_url'])
     
     db_apartment = ApartmentRent(**apartment_data)
@@ -108,6 +110,7 @@ def update_apartment_rent(db: Session, apartment_id: int, apartment: ApartmentRe
             raise ValueError("Only the admin who created the apartment can update it")
         
         update_data = apartment.dict(exclude_unset=True)
+        dropped = removed_urls(db_apartment.photos_url, update_data['photos_url']) if update_data.get('photos_url') is not None else []
         for field, value in update_data.items():
             if field == 'photos_url' and value is not None:
                 setattr(db_apartment, field, json.dumps(value))
@@ -115,6 +118,8 @@ def update_apartment_rent(db: Session, apartment_id: int, apartment: ApartmentRe
                 setattr(db_apartment, field, value)
         db.commit()
         db.refresh(db_apartment)
+        if dropped:
+            delete_urls_quietly(dropped)
     return db_apartment
 
 
@@ -127,8 +132,22 @@ def delete_apartment_rent(db: Session, apartment_id: int, current_admin_id: int 
         if current_admin_role != AdminRoleEnum.super_admin.value and current_admin_id and db_apartment.listed_by_admin_id != current_admin_id:
             raise ValueError("Only the admin who created the apartment can delete it")
         
+        from models import ApartmentPart, RentalContract
+        parts = db.query(ApartmentPart).filter(ApartmentPart.apartment_id == apartment_id).all()
+        part_ids = [p.id for p in parts]
+        if part_ids and db.query(RentalContract).filter(RentalContract.apartment_part_id.in_(part_ids)).first():
+            raise ValueError("Cannot delete an apartment whose studios have rental contracts. Delete the contracts first")
+
+        urls = parse_urls(db_apartment.photos_url)
+        part_urls = {p.id: parse_urls(p.photos_url) for p in parts}
+
         db.delete(db_apartment)
         db.commit()
+
+        storage = get_storage_from_env()
+        storage.delete_entity_files("rent", apartment_id, urls)
+        for pid, purls in part_urls.items():
+            storage.delete_entity_files("part", pid, purls)
     return db_apartment
 
 

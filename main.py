@@ -9,6 +9,8 @@ from contextlib import asynccontextmanager
 from routers import auth, apartments, admins, rental_contracts
 from routers import uploads as uploads_router
 from database import engine, Base
+from bootstrap import bootstrap_super_admin
+from services.storage import get_storage_from_env
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -23,8 +25,15 @@ def create_tables():
         logger.error(f"Error creating database tables: {e}")
         raise
 
-# Create database tables on startup
-create_tables()
+def check_storage():
+    """Verify the configured file storage once at startup. Logs instead of crashing so a provider
+    hiccup cannot take the whole API down; uploads will report the error to the caller."""
+    try:
+        storage = get_storage_from_env()
+        storage.check()
+        logger.info("File storage ready: %s", type(storage).__name__)
+    except Exception as e:
+        logger.error("File storage is NOT usable (%s): %s", os.getenv("STORAGE_BACKEND", "local"), e)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,6 +42,8 @@ async def lifespan(app: FastAPI):
     try:
         # Ensure tables are created on every startup
         create_tables()
+        bootstrap_super_admin()
+        check_storage()
         logger.info("Server started successfully")
     except Exception as e:
         logger.error(f"Failed to start server: {e}")
@@ -49,11 +60,13 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
+# Configure CORS. CORS_ORIGINS is a comma-separated list of allowed origins ("*" allows all).
+# The frontend normally proxies /api, so this only matters for cross-origin deployments.
+cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure this for production
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials="*" not in cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -86,4 +99,4 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))

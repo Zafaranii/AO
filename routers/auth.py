@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
+from decouple import config
+import secrets
 
 from database import get_db
 from schemas.admin import AdminCreate, AdminResponse, MasterAdminCreate, MasterAdminCreateData
@@ -69,9 +71,9 @@ async def create_master_admin(
 ):
     """Create master admin with special password (no authentication required for initial setup)."""
     # Check master password
-    MASTER_PASSWORD = "MASTER_ADMIN_SETUP_2024"  # You can change this or make it configurable
-    
-    if admin.master_password != MASTER_PASSWORD:
+    master_password = config("MASTER_ADMIN_SETUP_PASSWORD", default="")
+
+    if not master_password or not secrets.compare_digest(admin.master_password, master_password):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid master password"

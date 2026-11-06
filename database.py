@@ -1,4 +1,5 @@
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from decouple import config
@@ -10,57 +11,64 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Database URL - MySQL configuration
-DATABASE_URL = config(
-    "DATABASE_URL", 
-    default="mysql+pymysql://root:password@localhost:3306/real_estate_db"
-)
+DEFAULT_DATABASE_URL = "mysql+pymysql://root:password@localhost:3306/real_estate_db"
+DATABASE_URL = config("DATABASE_URL", default=DEFAULT_DATABASE_URL)
 
-# Check if using default configuration
-if DATABASE_URL == "mysql+pymysql://root:password@localhost:3306/real_estate_db":
-    logger.warning("Using default database configuration. Consider creating a .env file with your actual database settings.")
-    logger.info("Default config: mysql+pymysql://root:password@localhost:3306/real_estate_db")
+# Managed providers hand out plain mysql:// URLs, which SQLAlchemy would resolve to the unavailable
+# MySQLdb driver. Always use PyMySQL.
+if DATABASE_URL.startswith("mysql://"):
+    DATABASE_URL = "mysql+pymysql://" + DATABASE_URL[len("mysql://"):]
+
+# DigitalOcean (and most managed MySQL) require TLS and append "?ssl-mode=REQUIRED", which PyMySQL does
+# not understand. Translate it into PyMySQL's ssl option. Set DATABASE_SSL_CA to a CA certificate file
+# to also verify the server certificate; otherwise the connection is encrypted but not verified.
+_url = make_url(DATABASE_URL)
+_ssl_mode = str(_url.query.get("ssl-mode", _url.query.get("ssl_mode", ""))).upper()
+_use_ssl = _ssl_mode in {"REQUIRED", "VERIFY_CA", "VERIFY_IDENTITY"} or config("DATABASE_SSL", default=False, cast=bool)
+if "ssl-mode" in _url.query or "ssl_mode" in _url.query:
+    DATABASE_URL = _url.difference_update_query(["ssl-mode", "ssl_mode"]).render_as_string(hide_password=False)
+
+_ssl_ca = config("DATABASE_SSL_CA", default="")
+CONNECT_ARGS = {}
+if _use_ssl:
+    CONNECT_ARGS["ssl"] = {"ca": _ssl_ca} if _ssl_ca else {"check_hostname": False}
+
+if DATABASE_URL == DEFAULT_DATABASE_URL:
+    logger.warning("Using default database configuration. Set DATABASE_URL in the environment.")
+
 
 def create_database_if_not_exists():
-    """Create the database if it doesn't exist."""
+    """Create the database if it doesn't exist (best effort; managed DBs usually already have one)."""
     try:
-        # Parse the database URL to get connection details
-        url_parts = DATABASE_URL.split('://')[1].split('@')
-        auth_part = url_parts[0].split(':')
-        host_port_part = url_parts[1].split('/')
-        
-        username = auth_part[0]
-        password = auth_part[1] if len(auth_part) > 1 else ''
-        host_port = host_port_part[0].split(':')
-        host = host_port[0]
-        port = int(host_port[1]) if len(host_port) > 1 else 3306
-        database = host_port_part[1] if len(host_port_part) > 1 else 'real_estate_db'
-        
-        # Connect to MySQL server (without specifying database)
+        url = make_url(DATABASE_URL)
+        if not url.database:
+            return False
         connection = pymysql.connect(
-            host=host,
-            port=port,
-            user=username,
-            password=password,
-            charset='utf8mb4'
+            host=url.host or "localhost",
+            port=url.port or 3306,
+            user=url.username,
+            password=url.password or "",
+            charset="utf8mb4",
+            ssl=CONNECT_ARGS.get("ssl"),
         )
-        
         with connection.cursor() as cursor:
-            # Create database if it doesn't exist
-            cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
-            logger.info(f"Database '{database}' created or already exists")
-        
+            cursor.execute(
+                f"CREATE DATABASE IF NOT EXISTS `{url.database}` "
+                "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+            )
         connection.close()
         return True
-        
     except Exception as e:
-        logger.error(f"Error creating database: {e}")
+        logger.warning(f"Could not auto-create database (continuing): {e}")
         return False
+
 
 # Create database if it doesn't exist
 create_database_if_not_exists()
 
 engine = create_engine(
     DATABASE_URL,
+    connect_args=CONNECT_ARGS,
     pool_pre_ping=True,
     pool_recycle=300,
     echo=config("DB_ECHO", default=False, cast=bool)

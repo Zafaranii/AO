@@ -1,0 +1,42 @@
+# Push to main -> copy this repo to the VPS (/opt/ayg/backend) -> rebuild and restart the stack.
+# Needs the repository secret VPS_PASSWORD (root password of the VPS).
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+env:
+  VPS_HOST: 2.24.59.44
+  # Pinned so the password is only ever sent to this server.
+  VPS_HOST_KEY: 2.24.59.44 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPssurcjRA41b4hHUcdHiNsxj0gKbfIWqGL9Gqt6fsx1
+  TARGET_DIR: /opt/ayg/backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        run: |
+          sudo apt-get install -y -qq sshpass >/dev/null
+          mkdir -p ~/.ssh && echo "$VPS_HOST_KEY" >> ~/.ssh/known_hosts
+
+      - name: Upload code
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          tar --exclude=.git -czf - . | sshpass -e ssh root@$VPS_HOST \
+            "rm -rf $TARGET_DIR.new && mkdir -p $TARGET_DIR.new && tar -xzf - -C $TARGET_DIR.new \
+             && rm -rf $TARGET_DIR && mv $TARGET_DIR.new $TARGET_DIR"
+
+      - name: Rebuild and restart
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: sshpass -e ssh root@$VPS_HOST "bash $TARGET_DIR/deploy/deploy.sh"

@@ -1,0 +1,96 @@
+# Production stack on the VPS: MySQL + API + frontend behind Caddy (automatic HTTPS).
+#   https://${DOMAIN}       -> web (frontend)
+#   https://www.${DOMAIN}   -> redirect to https://${DOMAIN}
+#   https://api.${DOMAIN}   -> api
+# Expected layout on the server (see deploy/README.md):
+#   /opt/ayg/.env        secrets (never in git)
+#   /opt/ayg/backend     this repo
+#   /opt/ayg/frontend    the frontend repo
+# Run through deploy/deploy.sh, which passes --env-file /opt/ayg/.env.
+name: ayg
+
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in /opt/ayg/.env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in /opt/ayg/.env}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks: [internal]
+
+  api:
+    build: ..
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in /opt/ayg/.env}
+      ENVIRONMENT: production
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-480}
+      CORS_ORIGINS: https://${DOMAIN},https://www.${DOMAIN}
+      MASTER_ADMIN_SETUP_PASSWORD: ${MASTER_ADMIN_SETUP_PASSWORD:-}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-Super Admin}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PHONE: ${BOOTSTRAP_ADMIN_PHONE:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
+      # Files live on the server disk (the uploads_data volume). Stored URLs are absolute so the
+      # frontend on ${DOMAIN} loads them from the API host, and deletes map them back to files.
+      STORAGE_BACKEND: local
+      UPLOADS_DIR: /app/uploads
+      UPLOADS_PUBLIC_BASE_PATH: https://api.${DOMAIN}/uploads
+    volumes:
+      - uploads_data:/app/uploads
+    networks: [internal]
+
+  web:
+    build:
+      context: ../../frontend
+      args:
+        VITE_SITE_URL: https://${DOMAIN}
+        VITE_API_BASE_URL: https://api.${DOMAIN}/api/v1
+    restart: unless-stopped
+    depends_on: [api]
+    environment:
+      SITE_URL: https://${DOMAIN}
+      # Fallback so same-origin /api and /uploads on ${DOMAIN} still reach the API.
+      API_PROXY_TARGET: http://api:8000
+    networks: [internal]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [api, web]
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - /opt/ayg/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [internal]
+
+volumes:
+  mysql_data:
+  uploads_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:

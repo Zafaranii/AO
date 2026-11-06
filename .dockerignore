@@ -1,0 +1,11 @@
+.git
+.env
+.venv
+venv
+__pycache__
+*.pyc
+uploads
+*.md
+*.pdf
+test_*
+debug_auth.py

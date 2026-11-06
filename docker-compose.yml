@@ -1,46 +1,61 @@
-# Real Estate Platform Docker Configuration
-version: '3.8'
-
+# Backend + database, container-only. Copy .env.example to .env first.
 services:
-  # MySQL Database
   db:
     image: mysql:8.0
-    container_name: real_estate_db
+    restart: unless-stopped
     environment:
-      MYSQL_DATABASE: real_estate_db
-      MYSQL_USER: real_estate_user
-      MYSQL_PASSWORD: real_estate_password
-      MYSQL_ROOT_PASSWORD: root_password
-    ports:
-      - "3306:3306"
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-real_estate_db}
+      MYSQL_USER: ${MYSQL_USER:-real_estate_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./sql:/docker-entrypoint-initdb.d
-    networks:
-      - real_estate_network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks: [backend]
 
-  # FastAPI Application
   api:
     build: .
-    container_name: real_estate_api
-    environment:
-      DATABASE_URL: mysql+pymysql://real_estate_user:real_estate_password@db:3306/real_estate_db
-      SECRET_KEY: your-production-secret-key-change-this
-    ports:
-      - "8000:8000"
+    restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-real_estate_user}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE:-real_estate_db}
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-480}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      MASTER_ADMIN_SETUP_PASSWORD: ${MASTER_ADMIN_SETUP_PASSWORD:-}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-Super Admin}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PHONE: ${BOOTSTRAP_ADMIN_PHONE:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      UPLOADS_DIR: /app/uploads
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+      S3_REGION: ${S3_REGION:-}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-}
+      S3_KEY_PREFIX: ${S3_KEY_PREFIX:-}
+      S3_ADDRESSING_STYLE: ${S3_ADDRESSING_STYLE:-}
+    ports:
+      - "${API_PORT:-8000}:8000"
     volumes:
-      - ./uploads:/app/uploads
-    networks:
-      - real_estate_network
-    command: >
-      sh -c "alembic upgrade head &&
-             uvicorn main:app --host 0.0.0.0 --port 8000"
+      - uploads_data:/app/uploads
+    networks: [backend]
 
 volumes:
   mysql_data:
+  uploads_data:
 
 networks:
-  real_estate_network:
-    driver: bridge
+  backend:

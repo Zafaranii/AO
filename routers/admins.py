@@ -5,7 +5,7 @@ from typing import List
 from database import get_db
 from models import Admin, AdminRoleEnum
 from schemas.admin import AdminCreate, AdminUpdate, AdminResponse
-from crud import get_admins, get_admin, create_admin, update_admin, delete_admin, get_admin_by_email
+from crud import get_admins, get_admin, create_admin, update_admin, delete_admin, get_admin_by_email, get_admin_by_phone
 from dependencies import get_current_super_admin, get_current_admin_or_super_admin
 
 router = APIRouter(
@@ -55,6 +55,11 @@ async def create_new_admin(
         raise HTTPException(
             status_code=400,
             detail="Email already registered"
+        )
+    if get_admin_by_phone(db, phone=admin.phone):
+        raise HTTPException(
+            status_code=400,
+            detail="Phone number already registered"
         )
     return create_admin(db=db, admin=admin)
 

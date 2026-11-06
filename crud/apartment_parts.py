@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 
 from models import ApartmentPart, ApartmentRent, PartStatusEnum
 from schemas.apartment_part import ApartmentPartCreate, ApartmentPartUpdate
+from services.media import parse_urls, removed_urls
+from services.storage import get_storage_from_env, delete_urls_quietly
 
 
 def get_apartment_part(db: Session, part_id: int):
@@ -43,7 +45,7 @@ def create_apartment_part(db: Session, part: ApartmentPartCreate, admin_id: int,
     part_data['floor'] = apartment.floor  # Inherit floor from apartment
     
     # Convert photos_url list to JSON string
-    if part_data.get('photos_url'):
+    if part_data.get('photos_url') is not None:
         part_data['photos_url'] = json.dumps(part_data['photos_url'])
     
     db_part = ApartmentPart(
@@ -70,7 +72,8 @@ def update_apartment_part(db: Session, part_id: int, part: ApartmentPartUpdate, 
             raise ValueError("Only the admin who created the apartment can update its parts")
         
         update_data = part.dict(exclude_unset=True)
-        
+        dropped = removed_urls(db_part.photos_url, update_data['photos_url']) if update_data.get('photos_url') is not None else []
+
         for field, value in update_data.items():
             if field == 'photos_url' and value is not None:
                 setattr(db_part, field, json.dumps(value))
@@ -78,6 +81,8 @@ def update_apartment_part(db: Session, part_id: int, part: ApartmentPartUpdate, 
                 setattr(db_part, field, value)
         db.commit()
         db.refresh(db_part)
+        if dropped:
+            delete_urls_quietly(dropped)
     return db_part
 
 
@@ -93,8 +98,14 @@ def delete_apartment_part(db: Session, part_id: int, current_admin_id: int = Non
         if current_admin_role != AdminRoleEnum.super_admin.value and current_admin_id and apartment and apartment.listed_by_admin_id != current_admin_id:
             raise ValueError("Only the admin who created the apartment can delete its parts")
         
+        from models import RentalContract
+        if db.query(RentalContract).filter(RentalContract.apartment_part_id == part_id).first():
+            raise ValueError("Cannot delete a studio that has a rental contract. Delete the contract first")
+
+        urls = parse_urls(db_part.photos_url)
         db.delete(db_part)
         db.commit()
+        get_storage_from_env().delete_entity_files("part", part_id, urls)
     return db_part
 
 
